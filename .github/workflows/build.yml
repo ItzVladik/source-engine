@@ -53,7 +53,7 @@ jobs:
     - name: Build windows-i386
       run: |
         git submodule init && git submodule update
-        ./waf.bat configure -T release --build-games=episodic --prefix=bin --32bits
+        ./waf.bat configure -T release --build-games=hl2 --prefix=bin --32bits
         ./waf.bat install
 
     - name: 'Upload Artifact'
@@ -70,7 +70,7 @@ jobs:
     - name: Build windows-amd64
       run: |
         git submodule init && git submodule update
-        ./waf.bat configure -T release --build-games=episodic --prefix=bin
+        ./waf.bat configure -T release --build-games=hl2 --prefix=bin
         ./waf.bat install
 
     - name: 'Upload Artifact'
