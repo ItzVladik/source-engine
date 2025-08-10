@@ -538,7 +538,7 @@ def configure(conf):
 	else:
 		cflags += [
 			'/I'+os.path.abspath('.')+'/thirdparty/SDL',
-			'/arch:SSE' if conf.env.DEST_CPU == 'x86' else '/arch:AVX',
+			'/arch:SSE',
 			'/GF',
 			'/Gy',
 			'/fp:fast',
