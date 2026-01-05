@@ -526,7 +526,7 @@ def configure(conf):
 	elif conf.env.DEST_CPU in ['arm', 'aarch64']:
 		flags += ['-fsigned-char']
 
-	if conf.env.DEST_CPU == 'arm':
+	if conf.env.DEST_CPU in [ 'arm', 'thumb' ]:
 		flags += ['-march=armv7-a', '-mfpu=neon-vfpv4']
 
 	if conf.env.DEST_OS == 'freebsd':
