@@ -8,12 +8,16 @@
 
 #include "BaseVSShader.h"
 
-#include "ShatteredGlass_ps20.inc"
-#include "ShatteredGlass_ps20b.inc"
-#include "ShatteredGlass_vs20.inc"
+#include "SDK_ShatteredGlass_ps20.inc"
+#include "SDK_ShatteredGlass_ps20b.inc"
+#include "SDK_ShatteredGlass_vs20.inc"
 
-BEGIN_VS_SHADER( ShatteredGlass,
-			  "Help for ShatteredGlass" )
+// NOTE: This has to be the last file included!
+#include "tier0/memdbgon.h"
+
+
+BEGIN_VS_SHADER( SDK_ShatteredGlass,
+			  "Help for SDK_ShatteredGlass" )
 
 	BEGIN_SHADER_PARAMS
 		SHADER_PARAM_OVERRIDE( BASETEXTURE, SHADER_PARAM_TYPE_TEXTURE, "Glass/glasswindowbreak070b", "unused", SHADER_PARAM_NOT_EDITABLE )
@@ -29,6 +33,14 @@ BEGIN_VS_SHADER( ShatteredGlass,
 		SHADER_PARAM( ENVMAPSATURATION, SHADER_PARAM_TYPE_FLOAT, "1.0", "saturation 0 == greyscale 1 == normal" )
 		SHADER_PARAM( FRESNELREFLECTION, SHADER_PARAM_TYPE_FLOAT, "1.0", "1.0 == mirror, 0.0 == water" )
 		SHADER_PARAM( UNLITFACTOR, SHADER_PARAM_TYPE_FLOAT, "0.7", "0.0 == multiply by lightmap, 1.0 == multiply by 1" )
+#ifdef PARALLAX_CORRECTED_CUBEMAPS
+		// Parallax cubemaps
+		SHADER_PARAM( ENVMAPPARALLAX, SHADER_PARAM_TYPE_BOOL, "0", "Enables parallax correction code for env_cubemaps" )
+		SHADER_PARAM( ENVMAPPARALLAXOBB1, SHADER_PARAM_TYPE_VEC4, "[1 0 0 0]", "The first line of the parallax correction OBB matrix" )
+		SHADER_PARAM( ENVMAPPARALLAXOBB2, SHADER_PARAM_TYPE_VEC4, "[0 1 0 0]", "The second line of the parallax correction OBB matrix" )
+		SHADER_PARAM( ENVMAPPARALLAXOBB3, SHADER_PARAM_TYPE_VEC4, "[0 0 1 0]", "The third line of the parallax correction OBB matrix" )
+		SHADER_PARAM( ENVMAPORIGIN, SHADER_PARAM_TYPE_VEC3, "[0 0 0]", "The world space position of the env_cubemap being corrected" )
+#endif
 	END_SHADER_PARAMS
 
 	SHADER_INIT_PARAMS()
@@ -85,7 +97,7 @@ BEGIN_VS_SHADER( ShatteredGlass,
 	{
 		if (params[BASETEXTURE]->IsDefined())
 		{
-			LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB );
+			LoadTexture( BASETEXTURE );
 
 			if ( !params[BASETEXTURE]->GetTextureValue()->IsTranslucent() )
 			{
@@ -96,7 +108,7 @@ BEGIN_VS_SHADER( ShatteredGlass,
 
 		if ( params[DETAIL]->IsDefined() )
 		{					 
-			LoadTexture( DETAIL, TEXTUREFLAGS_SRGB );
+			LoadTexture( DETAIL );
 		}
 
 		// Don't alpha test if the alpha channel is used for other purposes
@@ -106,9 +118,22 @@ BEGIN_VS_SHADER( ShatteredGlass,
 		if (params[ENVMAP]->IsDefined())
 		{
 			LoadCubeMap( ENVMAP );
+#ifdef MAPBASE
+			if (mat_specular_disable_on_missing.GetBool())
+			{
+				// Revert to defaultcubemap when the envmap texture is missing
+				// (should be equivalent to toolsblack in Mapbase)
+				if (params[ENVMAP]->GetTextureValue()->IsError())
+				{
+					params[ENVMAP]->SetStringValue( "engine/defaultcubemap" );
+					LoadCubeMap( ENVMAP );
+				}
+			}
+#endif
+
 			if ( params[ENVMAPMASK]->IsDefined() )
 			{
-				LoadTexture( ENVMAPMASK, g_pHardwareConfig->GetHDRType() == HDR_TYPE_NONE ? TEXTUREFLAGS_SRGB : 0 );
+				LoadTexture( ENVMAPMASK );
 			}
 		}
 	}
@@ -117,9 +142,17 @@ BEGIN_VS_SHADER( ShatteredGlass,
 	{
 		bool bHasEnvmapMask = false;
 		bool bHasEnvmap = false;
+#ifdef PARALLAX_CORRECTED_CUBEMAPS
+		// Parallax cubemaps
+		bool hasParallaxCorrection = false;
+#endif
 		if ( params[ENVMAP]->IsTexture() )
 		{
 			bHasEnvmap = true;
+#ifdef PARALLAX_CORRECTED_CUBEMAPS
+			// Parallax cubemaps
+			hasParallaxCorrection = params[ENVMAPPARALLAX]->GetIntValue() > 0;
+#endif
 			if ( params[ENVMAPMASK]->IsTexture() )
 			{
 				bHasEnvmapMask = true;
@@ -196,29 +229,39 @@ BEGIN_VS_SHADER( ShatteredGlass,
 
 			pShaderShadow->VertexShaderVertexFormat( flags, 3, 0, 0 );
 
-			DECLARE_STATIC_VERTEX_SHADER( shatteredglass_vs20 );
+			DECLARE_STATIC_VERTEX_SHADER( sdk_shatteredglass_vs20 );
 			SET_STATIC_VERTEX_SHADER_COMBO( ENVMAP_MASK,  bHasEnvmapMask );
-			SET_STATIC_VERTEX_SHADER( shatteredglass_vs20 );
+			SET_STATIC_VERTEX_SHADER( sdk_shatteredglass_vs20 );
 
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
-				DECLARE_STATIC_PIXEL_SHADER( shatteredglass_ps20b );
+				DECLARE_STATIC_PIXEL_SHADER( sdk_shatteredglass_ps20b );
 				SET_STATIC_PIXEL_SHADER_COMBO( CUBEMAP,  bHasEnvmap );
 				SET_STATIC_PIXEL_SHADER_COMBO( VERTEXCOLOR,  bHasVertexColor );
 				SET_STATIC_PIXEL_SHADER_COMBO( ENVMAPMASK,  bHasEnvmapMask );
 				SET_STATIC_PIXEL_SHADER_COMBO( BASEALPHAENVMAPMASK,  bHasBaseAlphaEnvmapMask );
 				SET_STATIC_PIXEL_SHADER_COMBO( HDRTYPE,  g_pHardwareConfig->GetHDRType() );
-				SET_STATIC_PIXEL_SHADER( shatteredglass_ps20b );
+#ifdef PARALLAX_CORRECTED_CUBEMAPS
+				// Parallax cubemaps enabled for 2_0b and onwards
+				SET_STATIC_PIXEL_SHADER_COMBO( PARALLAXCORRECT, hasParallaxCorrection );
+#else
+				SET_STATIC_PIXEL_SHADER_COMBO( PARALLAXCORRECT, false );
+#endif
+				SET_STATIC_PIXEL_SHADER( sdk_shatteredglass_ps20b );
 			}
 			else
 			{
-				DECLARE_STATIC_PIXEL_SHADER( shatteredglass_ps20 );
+				DECLARE_STATIC_PIXEL_SHADER( sdk_shatteredglass_ps20 );
 				SET_STATIC_PIXEL_SHADER_COMBO( CUBEMAP,  bHasEnvmap );
 				SET_STATIC_PIXEL_SHADER_COMBO( VERTEXCOLOR,  bHasVertexColor );
 				SET_STATIC_PIXEL_SHADER_COMBO( ENVMAPMASK,  bHasEnvmapMask );
 				SET_STATIC_PIXEL_SHADER_COMBO( BASEALPHAENVMAPMASK,  bHasBaseAlphaEnvmapMask );
 				SET_STATIC_PIXEL_SHADER_COMBO( HDRTYPE,  g_pHardwareConfig->GetHDRType() );
-				SET_STATIC_PIXEL_SHADER( shatteredglass_ps20 );
+#ifdef PARALLAX_CORRECTED_CUBEMAPS
+				// Parallax cubemaps
+				SET_STATIC_PIXEL_SHADER_COMBO( PARALLAXCORRECT, 0 ); // No parallax cubemaps with ps_2_0 :(
+#endif
+				SET_STATIC_PIXEL_SHADER( sdk_shatteredglass_ps20 );
 			}
 
 			DefaultFog();
@@ -243,30 +286,21 @@ BEGIN_VS_SHADER( ShatteredGlass,
 
 			pShaderAPI->BindStandardTexture( SHADER_SAMPLER6, TEXTURE_NORMALIZATION_CUBEMAP_SIGNED );
 
-			/*
-			"DOWATERFOG"				"0..1"
-			"ENVMAP_MASK"			"0..1"
-			*/
-			MaterialFogMode_t fogType = pShaderAPI->GetSceneFogMode();
-			int fogIndex = ( fogType == MATERIAL_FOG_LINEAR_BELOW_FOG_Z ) ? 1 : 0;
-
-			DECLARE_DYNAMIC_VERTEX_SHADER( shatteredglass_vs20 );
-			SET_DYNAMIC_VERTEX_SHADER_COMBO( DOWATERFOG,  fogIndex );
-			SET_DYNAMIC_VERTEX_SHADER( shatteredglass_vs20 );
+			DECLARE_DYNAMIC_VERTEX_SHADER( sdk_shatteredglass_vs20 );
+			SET_DYNAMIC_VERTEX_SHADER_COMBO( DOWATERFOG, ( pShaderAPI->GetSceneFogMode() == MATERIAL_FOG_LINEAR_BELOW_FOG_Z ) );
+			SET_DYNAMIC_VERTEX_SHADER( sdk_shatteredglass_vs20 );
 
 			if( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
-				DECLARE_DYNAMIC_PIXEL_SHADER( shatteredglass_ps20b );
-				SET_DYNAMIC_PIXEL_SHADER_COMBO( HDRENABLED,  IsHDREnabled() );
+				DECLARE_DYNAMIC_PIXEL_SHADER( sdk_shatteredglass_ps20b );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
-				SET_DYNAMIC_PIXEL_SHADER( shatteredglass_ps20b );
+				SET_DYNAMIC_PIXEL_SHADER( sdk_shatteredglass_ps20b );
 			}
 			else
 			{
-				DECLARE_DYNAMIC_PIXEL_SHADER( shatteredglass_ps20 );
-				SET_DYNAMIC_PIXEL_SHADER_COMBO( HDRENABLED,  IsHDREnabled() );
+				DECLARE_DYNAMIC_PIXEL_SHADER( sdk_shatteredglass_ps20 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
-				SET_DYNAMIC_PIXEL_SHADER( shatteredglass_ps20 );
+				SET_DYNAMIC_PIXEL_SHADER( sdk_shatteredglass_ps20 );
 			}
 
 			SetEnvMapTintPixelShaderDynamicState( 0, ENVMAPTINT, -1 );
@@ -291,6 +325,30 @@ BEGIN_VS_SHADER( ShatteredGlass,
 			overbright[1] = params[UNLITFACTOR]->GetFloatValue();
 			overbright[2] = overbright[3] = 1.0f - params[UNLITFACTOR]->GetFloatValue();
 			pShaderAPI->SetPixelShaderConstant( 6, overbright );
+			
+#ifdef PARALLAX_CORRECTED_CUBEMAPS
+			// Parallax cubemaps
+			if (hasParallaxCorrection)
+			{
+				pShaderAPI->SetPixelShaderConstant( 7, params[ENVMAPORIGIN]->GetVecValue() );
+
+				float* vecs[3];
+				vecs[0] = const_cast<float*>(params[ENVMAPPARALLAXOBB1]->GetVecValue());
+				vecs[1] = const_cast<float*>(params[ENVMAPPARALLAXOBB2]->GetVecValue());
+				vecs[2] = const_cast<float*>(params[ENVMAPPARALLAXOBB3]->GetVecValue());
+				float matrix[4][4];
+				for (int i = 0; i < 3; i++)
+				{
+					for (int j = 0; j < 4; j++)
+					{
+						matrix[i][j] = vecs[i][j];
+					}
+				}
+				matrix[3][0] = matrix[3][1] = matrix[3][2] = 0;
+				matrix[3][3] = 1;
+				pShaderAPI->SetPixelShaderConstant( 8, &matrix[0][0], 4 );
+			}
+#endif
 		}
 		Draw();
 	}

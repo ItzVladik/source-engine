@@ -204,7 +204,8 @@ int	CMultiplayRules::Damage_GetShouldNotBleed( void )
 bool CMultiplayRules::Damage_IsTimeBased( int iDmgType )
 {
 	// Damage types that are time-based.
-	return ( ( iDmgType & ( DMG_PARALYZE | DMG_NERVEGAS | DMG_POISON | DMG_RADIATION | DMG_DROWNRECOVER | DMG_ACID | DMG_SLOWBURN ) ) != 0 );
+	//Tony; fixed. return Damage_GetTimeBased instead of checking them directly.
+	return ( ( iDmgType & Damage_GetTimeBased() ) != 0 );
 }
 
 //-----------------------------------------------------------------------------
@@ -368,7 +369,9 @@ ConVarRef suitcharger( "sk_suitcharger" );
 
 		if ( g_fGameOver )   // someone else quit the game already
 		{
-			ChangeLevel(); // intermission is over
+			// Tony; wait for intermission to end
+			if ( m_flIntermissionEndTime && ( m_flIntermissionEndTime < gpGlobals->curtime ) )
+				ChangeLevel(); // intermission is over
 			return;
 		}
 
@@ -1151,14 +1154,12 @@ ConVarRef suitcharger( "sk_suitcharger" );
 
 	void StripChar(char *szBuffer, const char cWhiteSpace )
 	{
-		char *src, *dst;
 
-		for (src = dst = szBuffer; *src != '\0'; src++)
+		while ( char *pSpace = strchr( szBuffer, cWhiteSpace ) )
 		{
-			*dst = *src;
-			if (*dst != cWhiteSpace) dst++;
+			char *pNextChar = pSpace + sizeof(char);
+			V_strcpy( pSpace, pNextChar );
 		}
-		*dst = '\0';
 	}
 
 	void CMultiplayRules::GetNextLevelName( char *pszNextMap, int bufsize, bool bRandom /* = false */ )

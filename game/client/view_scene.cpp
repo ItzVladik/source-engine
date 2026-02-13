@@ -23,7 +23,6 @@
 ConVar r_updaterefracttexture( "r_updaterefracttexture", "1", FCVAR_CHEAT );
 ConVar r_depthoverlay( "r_depthoverlay", "0", FCVAR_CHEAT, "Replaces opaque objects with their grayscaled depth values. r_showz_power scales the output." );
 
-
 int g_viewscene_refractUpdateFrame = 0;
 bool g_bAllowMultipleRefractUpdatesPerScenePerFrame = false;
 
@@ -112,8 +111,6 @@ int HudTransform( const Vector& point, Vector& screen )
 	}
 }
 
-
-
 void UpdateFullScreenDepthTexture( void )
 {
 	if( !g_pMaterialSystemHardwareConfig->SupportsPixelShaders_2_b() )
@@ -144,7 +141,7 @@ void UpdateFullScreenDepthTexture( void )
 			pDepthInAlpha = pMaterial->FindVar( "$ALPHADEPTH", NULL, false );
 			pDepthInAlpha->SetIntValue( 1 );
 		}
-		
+
 		BaseTextureVar->SetTextureValue( pDepthTex );
 
 		pRenderContext->OverrideDepthEnable( true, false ); //don't write to depth, or else we'll never see translucents

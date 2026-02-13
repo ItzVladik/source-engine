@@ -6,15 +6,15 @@
 //=============================================================================//
 
 #include "BaseVSShader.h"
-#include "core_vs20.inc"
-#include "core_ps20.inc"
-#include "core_ps20b.inc"
+#include "SDK_core_vs20.inc"
+#include "SDK_core_ps20.inc"
+#include "SDK_core_ps20b.inc"
 
 #define MAXBLUR 1
 
-DEFINE_FALLBACK_SHADER( Core, Core_DX90 )
+DEFINE_FALLBACK_SHADER( SDK_Core, SDK_Core_DX90 )
 
-BEGIN_VS_SHADER( Core_DX90, 
+BEGIN_VS_SHADER( SDK_Core_DX90, 
 			  "Help for Core" )
 
 	BEGIN_SHADER_PARAMS
@@ -37,6 +37,10 @@ BEGIN_VS_SHADER( Core_DX90,
 		SHADER_PARAM( CORECOLORTEXTURE, SHADER_PARAM_TYPE_TEXTURE, "", "" );
 		SHADER_PARAM( CORECOLORTEXTUREFRAME, SHADER_PARAM_TYPE_INTEGER, "", "" );
 		SHADER_PARAM( FLOWMAPTEXCOORDOFFSET, SHADER_PARAM_TYPE_FLOAT, "0.0", "" );
+#ifdef MAPBASE
+		SHADER_PARAM( SPHERECENTER, SHADER_PARAM_TYPE_VEC3, "2688.0, 12139.0, 5170.0", "The sphere's worldspace center (was previously hardcoded)" );
+		SHADER_PARAM( SPHERERADIUS, SHADER_PARAM_TYPE_FLOAT, "215.0", "The sphere's worldspace radius (was previously hardcoded)" );
+#endif
 	END_SHADER_PARAMS
 	SHADER_INIT_PARAMS()
 	{
@@ -67,7 +71,7 @@ BEGIN_VS_SHADER( Core_DX90,
 	SHADER_FALLBACK
 	{
 		if( g_pHardwareConfig->GetDXSupportLevel() < 90 )
-			return "Core_dx80";
+			return "Core_dx90";
 
 		return 0;
 	}
@@ -76,7 +80,7 @@ BEGIN_VS_SHADER( Core_DX90,
 	{
 		if (params[BASETEXTURE]->IsDefined() )
 		{
-			LoadTexture( BASETEXTURE, TEXTUREFLAGS_SRGB );
+			LoadTexture( BASETEXTURE );
 		}
 		if (params[NORMALMAP]->IsDefined() )
 		{
@@ -84,7 +88,7 @@ BEGIN_VS_SHADER( Core_DX90,
 		}
 		if ( params[ENVMAP]->IsDefined() )
 		{
-			LoadCubeMap( ENVMAP, TEXTUREFLAGS_SRGB );
+			LoadCubeMap( ENVMAP );
 		}
 		if ( params[FLOWMAP]->IsDefined() )
 		{
@@ -177,27 +181,27 @@ BEGIN_VS_SHADER( Core_DX90,
 
 			pShaderShadow->VertexShaderVertexFormat( flags, nTexCoordCount, NULL, userDataSize );
 
-			DECLARE_STATIC_VERTEX_SHADER( core_vs20 );
+			DECLARE_STATIC_VERTEX_SHADER( sdk_core_vs20 );
 			SET_STATIC_VERTEX_SHADER_COMBO( MODEL,  bIsModel );
-			SET_STATIC_VERTEX_SHADER( core_vs20 );
+			SET_STATIC_VERTEX_SHADER( sdk_core_vs20 );
 
 			if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
-				DECLARE_STATIC_PIXEL_SHADER( core_ps20b );
+				DECLARE_STATIC_PIXEL_SHADER( sdk_core_ps20b );
 				SET_STATIC_PIXEL_SHADER_COMBO( CUBEMAP,  bHasEnvmap && ( nPass == 1 ) );
 				SET_STATIC_PIXEL_SHADER_COMBO( FLOWMAP, bHasFlowmap );
 				SET_STATIC_PIXEL_SHADER_COMBO( CORECOLORTEXTURE, bHasCoreColorTexture && ( nPass == 0 ) );
 				SET_STATIC_PIXEL_SHADER_COMBO( REFRACT, nPass == 0 );
-				SET_STATIC_PIXEL_SHADER( core_ps20b );
+				SET_STATIC_PIXEL_SHADER( sdk_core_ps20b );
 			}
 			else
 			{
-				DECLARE_STATIC_PIXEL_SHADER( core_ps20 );
+				DECLARE_STATIC_PIXEL_SHADER( sdk_core_ps20 );
 				SET_STATIC_PIXEL_SHADER_COMBO( CUBEMAP,  bHasEnvmap && ( nPass == 1 ) );
 				SET_STATIC_PIXEL_SHADER_COMBO( FLOWMAP, bHasFlowmap );
 				SET_STATIC_PIXEL_SHADER_COMBO( CORECOLORTEXTURE, bHasCoreColorTexture && ( nPass == 0 ) );
 				SET_STATIC_PIXEL_SHADER_COMBO( REFRACT, nPass == 0 );
-				SET_STATIC_PIXEL_SHADER( core_ps20 );
+				SET_STATIC_PIXEL_SHADER( sdk_core_ps20 );
 			}
 
 			DefaultFog();
@@ -232,22 +236,22 @@ BEGIN_VS_SHADER( Core_DX90,
 				BindTexture( SHADER_SAMPLER7, CORECOLORTEXTURE, CORECOLORTEXTUREFRAME );
 			}
 
-			DECLARE_DYNAMIC_VERTEX_SHADER( core_vs20 );
+			DECLARE_DYNAMIC_VERTEX_SHADER( sdk_core_vs20 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( SKINNING,  pShaderAPI->GetCurrentNumBones() > 0 );
 			SET_DYNAMIC_VERTEX_SHADER_COMBO( COMPRESSED_VERTS, (int)vertexCompression );
-			SET_DYNAMIC_VERTEX_SHADER( core_vs20 );
+			SET_DYNAMIC_VERTEX_SHADER( sdk_core_vs20 );
 
 			if ( g_pHardwareConfig->SupportsPixelShaders_2_b() )
 			{
-				DECLARE_DYNAMIC_PIXEL_SHADER( core_ps20b );
+				DECLARE_DYNAMIC_PIXEL_SHADER( sdk_core_ps20b );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
-				SET_DYNAMIC_PIXEL_SHADER( core_ps20b );
+				SET_DYNAMIC_PIXEL_SHADER( sdk_core_ps20b );
 			}
 			else
 			{
-				DECLARE_DYNAMIC_PIXEL_SHADER( core_ps20 );
+				DECLARE_DYNAMIC_PIXEL_SHADER( sdk_core_ps20 );
 				SET_DYNAMIC_PIXEL_SHADER_COMBO( PIXELFOGTYPE, pShaderAPI->GetPixelFogCombo() );
-				SET_DYNAMIC_PIXEL_SHADER( core_ps20 );
+				SET_DYNAMIC_PIXEL_SHADER( sdk_core_ps20 );
 			}
 
 			SetVertexShaderTextureTransform( VERTEX_SHADER_SHADER_SPECIFIC_CONST_1, BUMPTRANSFORM );
@@ -285,6 +289,11 @@ BEGIN_VS_SHADER( Core_DX90,
 
 				SetPixelShaderConstant( 9, FLOWMAPTEXCOORDOFFSET );
 			}
+
+#ifdef MAPBASE
+			SetPixelShaderConstant( 12, SPHERECENTER );
+			SetPixelShaderConstant( 15, SPHERERADIUS );
+#endif
 		}
 		Draw();
 	}

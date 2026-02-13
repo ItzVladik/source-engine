@@ -86,7 +86,7 @@ string_t ExtractParentName(string_t parentName)
 		return parentName;
 
 	char szToken[256];
-	nexttoken(szToken, STRING(parentName), ',');
+	nexttoken(szToken, STRING(parentName), ',', sizeof(szToken));
 	return AllocPooledString(szToken);
 }
 
@@ -185,6 +185,12 @@ static void SortSpawnListByHierarchy( int nEntities, HierarchicalSpawn_t *pSpawn
 
 	g_pClassnameSpawnPriority->AddString( "prop_physics", 7 );
 	g_pClassnameSpawnPriority->AddString( "prop_ragdoll", 7 );
+
+#if defined(EZ2) && defined(LINUX)
+	// HACKHACK: Fixes dropships spawning before APCs and picking them up improperly on Linux
+	g_pClassnameSpawnPriority->AddString( "prop_vehicle_drivable_apc", 7 );
+#endif
+
 	// Sort the entities (other than the world) by hierarchy depth, in order to spawn them in
 	// that order. This insures that each entity's parent spawns before it does so that
 	// it can properly set up anything that relies on hierarchy.
@@ -208,7 +214,7 @@ void SetupParentsForSpawnList( int nEntities, HierarchicalSpawn_t *pSpawnList )
 			if ( strchr(STRING(pEntity->m_iParent), ',') )
 			{
 				char szToken[256];
-				const char *pAttachmentName = nexttoken(szToken, STRING(pEntity->m_iParent), ',');
+				const char *pAttachmentName = nexttoken(szToken, STRING(pEntity->m_iParent), ',', sizeof(szToken));
 				pEntity->m_iParent = AllocPooledString(szToken);
 				CBaseEntity *pParent = gEntList.FindEntityByName( NULL, pEntity->m_iParent );
 

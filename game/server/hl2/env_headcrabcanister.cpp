@@ -33,6 +33,9 @@ ConVar sk_env_headcrabcanister_shake_radius( "sk_env_headcrabcanister_shake_radi
 ConVar sk_env_headcrabcanister_shake_radius_vehicle( "sk_env_headcrabcanister_shake_radius_vehicle", "2500" );
 
 #define ENV_HEADCRABCANISTER_TRAIL_TIME	3.0f
+#ifdef MAPBASE
+#define RANDOM_CRAB_TYPE -1
+#endif
 
 //-----------------------------------------------------------------------------
 // Spawn flags
@@ -95,6 +98,9 @@ private:
 	void				InputOpenCanister( inputdata_t &inputdata );
 	void				InputSpawnHeadcrabs( inputdata_t &inputdata );
 	void				InputStopSmoke( inputdata_t &inputdata );
+#ifdef MAPBASE
+	void				InputStopHissing( inputdata_t &inputdata );
+#endif
 
 	// Think(s)
 	void				HeadcrabCanisterSkyboxThink( void );
@@ -152,6 +158,9 @@ private:
 	COutputEHANDLE m_OnLaunched;
 	COutputEvent m_OnImpacted;
 	COutputEvent m_OnOpened;
+#ifdef MAPBASE
+	COutputEHANDLE m_OnCrab;
+#endif
 
 	// Only for skybox only cannisters.
 	float m_flMinRefireTime;
@@ -201,11 +210,17 @@ BEGIN_DATADESC( CEnvHeadcrabCanister )
 	DEFINE_INPUTFUNC( FIELD_VOID, "OpenCanister", InputOpenCanister ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "SpawnHeadcrabs", InputSpawnHeadcrabs ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "StopSmoke", InputStopSmoke ),
+#ifdef MAPBASE
+	DEFINE_INPUTFUNC( FIELD_VOID, "StopHissing", InputStopHissing ),
+#endif
 
 	// Outputs
 	DEFINE_OUTPUT( m_OnLaunched, "OnLaunched" ),
 	DEFINE_OUTPUT( m_OnImpacted, "OnImpacted" ),
 	DEFINE_OUTPUT( m_OnOpened, "OnOpened" ),
+#ifdef MAPBASE
+	DEFINE_OUTPUT( m_OnCrab, "OnCrab" ),
+#endif
 
 END_DATADESC()
 
@@ -246,7 +261,22 @@ void CEnvHeadcrabCanister::Precache( void )
 	PrecacheScriptSound( "HeadcrabCanister.SkyboxExplosion" );
 	PrecacheScriptSound( "HeadcrabCanister.Open" );
 
+#ifdef MAPBASE
+	if ( m_nHeadcrabType != RANDOM_CRAB_TYPE )
+	{
+		UTIL_PrecacheOther( s_pHeadcrabClass[m_nHeadcrabType] );
+	}
+	else
+	{
+		// precache all the headcrabs if we're spawning random species
+		for ( int i = 0; i < ARRAYSIZE( s_pHeadcrabClass ); i++ )
+		{
+			UTIL_PrecacheOther( s_pHeadcrabClass[i] );
+		}
+	}
+#else
 	UTIL_PrecacheOther( s_pHeadcrabClass[m_nHeadcrabType] );
+#endif
 }
 
 
@@ -545,6 +575,17 @@ void CEnvHeadcrabCanister::InputStopSmoke( inputdata_t &inputdata )
 	}
 }
 
+#ifdef MAPBASE
+//-----------------------------------------------------------------------------
+// Purpose: 
+// Input  : &inputdata - 
+//-----------------------------------------------------------------------------
+void CEnvHeadcrabCanister::InputStopHissing( inputdata_t &inputdata )
+{
+	StopSound( "HeadcrabCanister.AfterLanding" );
+}
+#endif
+
 //=============================================================================
 //
 // Enumerator for swept bbox collision.
@@ -710,7 +751,17 @@ void CEnvHeadcrabCanister::HeadcrabCanisterSpawnHeadcrabThink()
 	int nHeadCrabAttachment = LookupAttachment( "headcrab" );
 	if ( GetAttachment( nHeadCrabAttachment, vecSpawnPosition, vecSpawnAngles ) )
 	{
+#ifdef MAPBASE
+		int iHeadcrabType = m_nHeadcrabType;
+		if ( m_nHeadcrabType == RANDOM_CRAB_TYPE )
+		{
+			iHeadcrabType = RandomInt( 0, ARRAYSIZE( s_pHeadcrabClass ) - 1 );
+		}
+
+		CBaseEntity *pEnt = CreateEntityByName( s_pHeadcrabClass[iHeadcrabType] );
+#else
 		CBaseEntity *pEnt = CreateEntityByName( s_pHeadcrabClass[m_nHeadcrabType] );
+#endif
 		CBaseHeadcrab *pHeadCrab = assert_cast<CBaseHeadcrab*>(pEnt);
 
 		// Necessary to get it to eject properly (don't allow the NPC
@@ -725,6 +776,10 @@ void CEnvHeadcrabCanister::HeadcrabCanisterSpawnHeadcrabThink()
 		pHeadCrab->SetLocalOrigin( vec3_origin );
 		pHeadCrab->SetLocalAngles( vec3_angle );
 		pHeadCrab->CrawlFromCanister();
+
+#ifdef MAPBASE
+		m_OnCrab.Set(pHeadCrab, pHeadCrab, this);
+#endif
 	}
 
 	if ( m_nHeadcrabCount != 0 )

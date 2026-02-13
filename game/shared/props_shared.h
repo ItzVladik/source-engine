@@ -32,6 +32,9 @@
 #define SF_PHYSPROP_ALWAYS_PICK_UP				0x100000		// Physcannon can always pick this up, no matter what mass or constraints may apply.
 #define SF_PHYSPROP_NO_COLLISIONS				0x200000		// Don't enable collisions on spawn
 #define SF_PHYSPROP_IS_GIB						0x400000		// Limit # of active gibs
+#ifdef MAPBASE
+#define SF_PHYSPROP_NO_ZOMBIE_SWAT				0x800000		// Zombies are not allowed to swat this
+#endif
 
 // Any barrel farther away than this is ignited rather than exploded.
 #define PROP_EXPLOSION_IGNITE_RADIUS			32.0f
@@ -68,6 +71,10 @@ enum propdata_interactions_t
 	PROPINTER_WORLD_BLOODSPLAT,			// "onworldimpact", "bloodsplat"
 	
 	PROPINTER_PHYSGUN_NOTIFY_CHILDREN,	// "onfirstimpact" cause attached flechettes to explode
+
+#ifdef EZ2
+	PROPINTER_PHYSGUN_BREAK_ZAP,		// "onbreak"		"explode_zap"
+#endif
 
 	// If we get more than 32 of these, we'll need a different system
 
@@ -221,7 +228,7 @@ struct breakmodel_t
 
 struct breakablepropparams_t
 {
-	breakablepropparams_t( const Vector _origin, const QAngle _angles, const Vector _velocity, const AngularImpulse _angularVelocity )
+	breakablepropparams_t( const Vector &_origin, const QAngle &_angles, const Vector &_velocity, const AngularImpulse &_angularVelocity )
 		: origin(_origin), angles(_angles), velocity(_velocity), angularVelocity(_angularVelocity)
 	{
 		impactEnergyScale = 0;
@@ -230,10 +237,10 @@ struct breakablepropparams_t
 		nDefaultSkin = 0;
 	}
 
-	const Vector origin;
-	const QAngle angles;
-	const Vector velocity;
-	const AngularImpulse angularVelocity;
+	const Vector &origin;
+	const QAngle &angles;
+	const Vector &velocity;
+	const AngularImpulse &angularVelocity;
 	float impactEnergyScale;
 	float defBurstScale;
 	int defCollisionGroup;

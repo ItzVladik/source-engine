@@ -172,6 +172,14 @@ propdata_interaction_s sPropdataInteractionSections[PROPINTER_NUM_INTERACTIONS] 
 	{ "physgun_interactions", "allow_overhead", "yes" },	// 	PROPINTER_PHYSGUN_ALLOW_OVERHEAD,
 
 	{ "world_interactions", "onworldimpact", "bloodsplat" },	// PROPINTER_WORLD_BLOODSPLAT,
+
+#ifdef EZ2
+	// HACKHACK: This interaction didn't have an entry in this array and is needed for subsequent interactions to work.
+	// TODO: This change would be more fitting for Mapbase since it's needed to add any new interactions.
+	{ "physgun_interactions", "onfirstimpact", "notify_children" }, // PROPINTER_PHYSGUN_NOTIFY_CHILDREN,
+
+	{ "physgun_interactions", "onbreak", "explode_zap" },		// PROPINTER_PHYSGUN_BREAK_ZAP,
+#endif
 };
 #else
 extern propdata_interaction_s sPropdataInteractionSections[PROPINTER_NUM_INTERACTIONS];
@@ -951,7 +959,7 @@ void PropBreakableCreateAll( int modelindex, IPhysicsObject *pPhysics, const bre
 			nSkin = pOwnerAnim->m_nSkin;
 		}
 	}
-	static matrix3x4_t localToWorld;
+	matrix3x4_t localToWorld;
 
 	CStudioHdr studioHdr;
 	const model_t *model = modelinfo->GetModel( modelindex );
@@ -1009,7 +1017,7 @@ void PropBreakableCreateAll( int modelindex, IPhysicsObject *pPhysics, const bre
 			if ( ( iPrecomputedBreakableCount != -1 ) && ( i >= iPrecomputedBreakableCount ) )
 				break;
 
-			static matrix3x4_t matrix;
+			matrix3x4_t matrix;
 			AngleMatrix( params.angles, params.origin, matrix );
 
 			CStudioHdr studioHdr;
@@ -1188,7 +1196,7 @@ void PropBreakableCreateAll( int modelindex, IPhysicsObject *pPhysics, const bre
 					Vector vecBreakableObbSize = pBreakable->CollisionProp()->OBBSize();
 
 					// Try to align the gibs along the original axis 
-					static matrix3x4_t matrix;
+					matrix3x4_t matrix;
 					AngleMatrix( vecAngles, matrix );
 					AlignBoxes( &matrix, vecObbSize, vecBreakableObbSize );
 					MatrixAngles( matrix, vecAngles );
@@ -1397,7 +1405,7 @@ CBaseEntity *CreateGibsFromList( CUtlVector<breakmodel_t> &list, int modelindex,
 			if ( ( iPrecomputedBreakableCount != -1 ) && ( i >= iPrecomputedBreakableCount ) )
 				break;
 
-			static matrix3x4_t matrix;
+			matrix3x4_t matrix;
 			AngleMatrix( params.angles, params.origin, matrix );
 
 			CStudioHdr studioHdr;
@@ -1596,7 +1604,7 @@ CBaseEntity *CreateGibsFromList( CUtlVector<breakmodel_t> &list, int modelindex,
 					Vector vecBreakableObbSize = pBreakable->CollisionProp()->OBBSize();
 
 					// Try to align the gibs along the original axis 
-					static matrix3x4_t matrix;
+					matrix3x4_t matrix;
 					AngleMatrix( vecAngles, matrix );
 					AlignBoxes( &matrix, vecObbSize, vecBreakableObbSize );
 					MatrixAngles( matrix, vecAngles );

@@ -1,0 +1,56 @@
+#! /usr/bin/env python
+# encoding: utf-8
+
+from waflib import Utils
+import os
+
+top = '.'
+PROJECT_NAME = 'responserules'
+
+def options(opt):
+	# stub
+	return
+
+def configure(conf):
+	conf.env.append_unique('DEFINES',[
+		'RR_RUNTIME',
+		'MAPBASE',
+	])
+
+def build(bld):
+	source = [
+		'criteriaset.cpp',
+		'response_system.cpp',
+		'response_types.cpp',
+		'response_types_internal.cpp',
+		'rr_convars.cpp',
+		'rr_response.cpp',
+		'rr_speechconcept.cpp',
+		'rrrlib.cpp',
+	]
+
+	includes = [
+		'.',
+		'../../public',
+		'../../public/responserules',
+		'../../public/tier0',
+		'../../public/tier1',
+		'../../public/mathlib',
+	]	
+
+	defines = []
+
+	libs = []
+
+	bld.stlib(
+		source   = source,
+		target   = PROJECT_NAME,
+		name     = PROJECT_NAME,
+		features = 'c cxx',
+		includes = includes,
+		defines  = defines,
+		use      = libs,
+		subsystem = bld.env.MSVC_SUBSYSTEM,
+		idx      = bld.get_taskgen_count()
+	)
+

@@ -163,12 +163,30 @@ void CBasePlayer::ItemPreFrame()
 	// Handle use events
 	PlayerUse();
 
-	CBaseCombatWeapon *pActive = GetActiveWeapon();
+	//Tony; re-ordered this for efficiency and to make sure that certain things happen in the correct order!
+    if ( gpGlobals->curtime < m_flNextAttack )
+	{
+		return;
+	}
 
+	if (!GetActiveWeapon())
+		return;
+
+#if defined( CLIENT_DLL )
+	// Not predicting this weapon
+	if ( !GetActiveWeapon()->IsPredicted() )
+		return;
+#endif
+
+	GetActiveWeapon()->ItemPreFrame();
+
+	CBaseCombatWeapon *pWeapon;
+
+	CBaseCombatWeapon *pActive = GetActiveWeapon();
 	// Allow all the holstered weapons to update
 	for ( int i = 0; i < WeaponCount(); ++i )
 	{
-		CBaseCombatWeapon *pWeapon = GetWeapon( i );
+		pWeapon = GetWeapon( i );
 
 		if ( pWeapon == NULL )
 			continue;
@@ -178,20 +196,6 @@ void CBasePlayer::ItemPreFrame()
 
 		pWeapon->ItemHolsterFrame();
 	}
-
-    if ( gpGlobals->curtime < m_flNextAttack )
-		return;
-
-	if (!pActive)
-		return;
-
-#if defined( CLIENT_DLL )
-	// Not predicting this weapon
-	if ( !pActive->IsPredicted() )
-		return;
-#endif
-
-	pActive->ItemPreFrame();
 }
 
 //-----------------------------------------------------------------------------
@@ -1065,6 +1069,10 @@ float IntervalDistance( float x, float x0, float x1 )
 	return 0;
 }
 
+#if !defined(CLIENT_DLL) && defined(MAPBASE_VSCRIPT)
+extern ScriptHook_t g_Hook_FindUseEntity;
+#endif
+
 CBaseEntity *CBasePlayer::FindUseEntity()
 {
 	Vector forward, up;
@@ -1156,7 +1164,24 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 				
 				// if this is directly under the cursor just return it now
 				if ( i == 0 )
+				{
+#if !defined(CLIENT_DLL) && defined(MAPBASE_VSCRIPT)
+					if (m_ScriptScope.IsInitialized() && g_Hook_FindUseEntity.CanRunInScope( m_ScriptScope ))
+					{
+						// entity, is_radius
+						ScriptVariant_t functionReturn;
+						ScriptVariant_t args[] = { ToHScript( pNearest ), false };
+						if (g_Hook_FindUseEntity.Call( m_ScriptScope, &functionReturn, args ))
+						{
+							pObject = ToEnt( functionReturn.m_hScript );
+							pNearest = pObject;
+						}
+					}
+
+					if (pObject)
+#endif
 					return pObject;
+				}
 			}
 		}
 	}
@@ -1241,6 +1266,19 @@ CBaseEntity *CBasePlayer::FindUseEntity()
 	{
 		pNearest = DoubleCheckUseNPC( pNearest, searchCenter, forward );
 	}
+	
+#ifdef MAPBASE_VSCRIPT
+	if (m_ScriptScope.IsInitialized() && g_Hook_FindUseEntity.CanRunInScope(m_ScriptScope))
+	{
+		// entity, is_radius
+		ScriptVariant_t functionReturn;
+		ScriptVariant_t args[] = { ToHScript( pNearest ), true };
+		if (g_Hook_FindUseEntity.Call( m_ScriptScope, &functionReturn, args ))
+		{
+			pNearest = ToEnt( functionReturn.m_hScript );
+		}
+	}
+#endif
 
 	if ( sv_debug_player_use.GetBool() )
 	{

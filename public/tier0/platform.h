@@ -825,29 +825,6 @@ typedef void *HANDLE;
 #endif
 
 //-----------------------------------------------------------------------------
-// fsel
-//-----------------------------------------------------------------------------
-#ifndef _X360
-
-static FORCEINLINE float fsel(float fComparand, float fValGE, float fLT)
-{
-	return fComparand >= 0 ? fValGE : fLT;
-}
-static FORCEINLINE double fsel(double fComparand, double fValGE, double fLT)
-{
-	return fComparand >= 0 ? fValGE : fLT;
-}
-
-#else
-
-// __fsel(double fComparand, double fValGE, double fLT) == fComparand >= 0 ? fValGE : fLT
-// this is much faster than if ( aFloat > 0 ) { x = .. }
-#define fsel __fsel
-
-#endif
-
-
-//-----------------------------------------------------------------------------
 // FP exception handling
 //-----------------------------------------------------------------------------
 //#define CHECK_FLOAT_EXCEPTIONS		1
@@ -1422,7 +1399,13 @@ inline bool Plat_IsInDebugSession( bool bForceRecheck = false ) { return false; 
 //-----------------------------------------------------------------------------
 PLATFORM_INTERFACE bool Is64BitOS();
 
-
+//-----------------------------------------------------------------------------
+// General Mapbase version constants compiled into projects for versioning purposes
+//-----------------------------------------------------------------------------
+#ifdef MAPBASE
+#define MAPBASE_VERSION "7.2"
+#define MAPBASE_VER_INT 7200	// For use in #if in a similar fashion to macros like _MSC_VER
+#endif
 //-----------------------------------------------------------------------------
 // XBOX Components valid in PC compilation space
 //-----------------------------------------------------------------------------

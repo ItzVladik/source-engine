@@ -32,6 +32,11 @@ public:
 	DECLARE_DATADESC();
 	DECLARE_SERVERCLASS();
 
+#ifdef EZ2
+	CPropCombineBall();
+	~CPropCombineBall();
+#endif
+
 	virtual void Precache();
 	virtual void Spawn();
 	virtual void UpdateOnRemove();
@@ -65,6 +70,10 @@ public:
 	void InputFadeAndRespawn( inputdata_t &inputdata );
 	void InputKill( inputdata_t &inputdata );
 	void InputSocketed( inputdata_t &inputdata );
+#ifdef MAPBASE
+	void InputSetLifetime( inputdata_t &inputdata );
+	void InputAddLifetime( inputdata_t &inputdata );
+#endif
 
 	enum
 	{
@@ -94,6 +103,9 @@ public:
 
 	void	SetSpawner( CFuncCombineBallSpawner *pSpawner ) { m_hSpawner = pSpawner; }
 	void	NotifySpawnerOfRemoval( void );
+#ifdef MAPBASE
+	void	SpawnerDestroyed( CBaseEntity *pActivator, bool *bSeekEnemy );
+#endif
 
 
 	float	LastCaptureTime() const;
@@ -239,6 +251,9 @@ private:
 	// Input
 	void	InputEnable( inputdata_t &inputdata );
 	void	InputDisable( inputdata_t &inputdata );
+#ifdef MAPBASE
+	void	InputDestroy( inputdata_t &inputdata );
+#endif
 
 	// Fire ball grabbed output
 	void	GrabBallTouch( CBaseEntity *pOther );

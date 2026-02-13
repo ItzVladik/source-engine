@@ -25,7 +25,9 @@
 #include "tier0/icommandline.h"
 #include "inputsystem/iinputsystem.h"
 #include "inputsystem/ButtonCode.h"
+#if _MSC_VER < 1900
 #include "math.h"
+#endif
 #include "tier1/convar_serverbounded.h"
 #include "cam_thirdperson.h"
 
@@ -33,6 +35,10 @@
 #include "xbox/xbox_win32stubs.h"
 #else
 #include "../common/xbox/xboxstubs.h"
+#endif
+
+#ifdef STEAM_INPUT
+#include "expanded_steam/isteaminput.h"
 #endif
 
 #ifdef HL2_CLIENT_DLL
@@ -528,6 +534,11 @@ void CInput::Joystick_Advanced(void)
 		Msg( "Advanced Joystick settings initialized\n" );
 	}
 
+#ifdef STEAM_INPUT
+	if (g_pSteamInput->IsEnabled())
+		return;
+#endif
+
 	// If we have an xcontroller, load the cfg file if it hasn't been loaded.
 	static ConVarRef var( "joy_xcontroller_found" );
 	if ( var.IsValid() && var.GetBool() && in_joystick.GetBool() )
@@ -680,7 +691,11 @@ void CInput::JoyStickMove( float frametime, CUserCmd *cmd )
 		return;
 
 	// Reinitialize the 'advanced joystick' system if hotplugging has caused us toggle between some/none joysticks.
+#ifdef STEAM_INPUT
+	bool haveJoysticks = g_pSteamInput->UsingJoysticks();
+#else
 	bool haveJoysticks = ( inputsystem->GetJoystickCount() > 0 );
+#endif
 	if ( haveJoysticks != m_fHadJoysticks )
 	{
 		Joystick_Advanced();
@@ -709,6 +724,16 @@ void CInput::JoyStickMove( float frametime, CUserCmd *cmd )
 	axis_t gameAxes[ MAX_GAME_AXES ];
 	memset( &gameAxes, 0, sizeof(gameAxes) );
 
+#ifdef STEAM_INPUT
+	bool gameAxesRelative[ MAX_GAME_AXES ];
+	g_pSteamInput->GetJoystickValues( gameAxes[GAME_AXIS_FORWARD].value, gameAxes[GAME_AXIS_SIDE].value, gameAxes[GAME_AXIS_PITCH].value, gameAxes[GAME_AXIS_YAW].value,
+		gameAxesRelative[GAME_AXIS_FORWARD], gameAxesRelative[GAME_AXIS_SIDE], gameAxesRelative[GAME_AXIS_PITCH], gameAxesRelative[GAME_AXIS_YAW] );
+
+	for ( int i = 0; i < MAX_GAME_AXES; ++i )
+	{
+		gameAxes[i].controlType = gameAxesRelative[i] ? JOY_RELATIVE_AXIS : JOY_ABSOLUTE_AXIS;
+	}
+#else
 	// Get each joystick axis value, and normalize the range
 	for ( int i = 0; i < MAX_JOYSTICK_AXES; ++i )
 	{
@@ -734,6 +759,7 @@ void CInput::JoyStickMove( float frametime, CUserCmd *cmd )
 		gameAxes[idx].value = fAxisValue;
 		gameAxes[idx].controlType = m_rgAxes[i].ControlMap;
 	}
+#endif
 
 	// Re-map the axis values if necessary, based on the joystick configuration
 	if ( (joy_advanced.GetInt() == 0) && (in_jlook.state & 1) )

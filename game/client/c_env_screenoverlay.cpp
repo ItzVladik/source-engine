@@ -48,6 +48,9 @@ protected:
 	int		m_iCachedDesiredOverlay;
 	int		m_iCurrentOverlay;
 	float	m_flCurrentOverlayTime;
+#ifdef MAPBASE
+	int	m_iOverlayIndex;
+#endif
 };
 
 IMPLEMENT_CLIENTCLASS_DT( C_EnvScreenOverlay, DT_EnvScreenOverlay, CEnvScreenOverlay )
@@ -56,6 +59,9 @@ IMPLEMENT_CLIENTCLASS_DT( C_EnvScreenOverlay, DT_EnvScreenOverlay, CEnvScreenOve
 	RecvPropFloat( RECVINFO( m_flStartTime ) ),
 	RecvPropInt( RECVINFO( m_iDesiredOverlay ) ),
 	RecvPropBool( RECVINFO( m_bIsActive ) ),
+#ifdef MAPBASE
+	RecvPropInt( RECVINFO( m_iOverlayIndex ) ),
+#endif
 END_RECV_TABLE()
 
 //-----------------------------------------------------------------------------
@@ -77,7 +83,11 @@ void C_EnvScreenOverlay::PostDataUpdate( DataUpdateType_t updateType )
 	BaseClass::PostDataUpdate( updateType );
 
 	// If we have a start time now, start the overlays going
+#ifdef MAPBASE
+	if ( m_bIsActive && m_flStartTime > 0 && (view->GetScreenOverlayMaterial() == NULL || (m_iOverlayIndex != -1 && view->GetIndexedScreenOverlayMaterial(m_iOverlayIndex) == NULL)) )
+#else
 	if ( m_bIsActive && m_flStartTime > 0 && view->GetScreenOverlayMaterial() == NULL )
+#endif
 	{
 		StartOverlays();
 	}
@@ -111,7 +121,16 @@ void C_EnvScreenOverlay::StopOverlays( void )
 
 	if ( m_bWasActive && !m_bIsActive )
 	{
-		view->SetScreenOverlayMaterial( NULL );
+#ifdef MAPBASE
+		if (m_iOverlayIndex != -1)
+		{
+			view->SetIndexedScreenOverlayMaterial( m_iOverlayIndex, NULL );
+		}
+		else
+#endif
+		{
+			view->SetScreenOverlayMaterial( NULL );
+		}
 	}
 }
 
@@ -163,7 +182,16 @@ void C_EnvScreenOverlay::StartCurrentOverlay( void )
 	IMaterial *pMaterial = materials->FindMaterial( m_iszOverlayNames[m_iCurrentOverlay], TEXTURE_GROUP_CLIENT_EFFECTS, false );
 	if ( !IsErrorMaterial( pMaterial ) )
 	{
-		view->SetScreenOverlayMaterial( pMaterial );
+#ifdef MAPBASE
+		if (m_iOverlayIndex != -1)
+		{
+			view->SetIndexedScreenOverlayMaterial( m_iOverlayIndex, pMaterial );
+		}
+		else
+#endif
+		{
+			view->SetScreenOverlayMaterial( pMaterial );
+		}
 	}
 	else
 	{
@@ -191,6 +219,11 @@ enum
 	SCREENEFFECT_EP2_ADVISOR_STUN,
 	SCREENEFFECT_EP1_INTRO,
 	SCREENEFFECT_EP2_GROGGY,
+
+#ifdef MAPBASE
+	SCREENEFFECT_MAPBASE_CHROMATIC_BLUR = 100,			// Overlays 3 different frames of red, green, and blue tints respectively with different offsets
+	SCREENEFFECT_MAPBASE_CHROMATIC_ABERRATION,			// Similar to above, except it stretches frames in addition to offsetting them
+#endif
 };
 
 // ============================================================================
@@ -275,6 +308,21 @@ void C_EnvScreenEffect::ReceiveMessage( int classID, bf_read &msg )
 					g_pScreenSpaceEffects->SetScreenSpaceEffectParams( "ep2_groggy", pKeys );
 					g_pScreenSpaceEffects->EnableScreenSpaceEffect( "ep2_groggy" );
 				}
+#ifdef MAPBASE
+				else if ( m_nType == SCREENEFFECT_MAPBASE_CHROMATIC_BLUR || m_nType == SCREENEFFECT_MAPBASE_CHROMATIC_ABERRATION )
+				{
+					if( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 80 )
+						return;
+
+					// Set our keys
+					pKeys->SetFloat( "duration", m_flDuration );
+					pKeys->SetInt( "fadeout", 0 );
+					pKeys->SetInt( "stretch", m_nType == SCREENEFFECT_MAPBASE_CHROMATIC_ABERRATION );
+
+					g_pScreenSpaceEffects->SetScreenSpaceEffectParams( "mapbase_chromatic_aberration", pKeys );
+					g_pScreenSpaceEffects->EnableScreenSpaceEffect( "mapbase_chromatic_aberration" );
+				}
+#endif
                 
 				pKeys->deleteThis();
 			}
@@ -321,6 +369,25 @@ void C_EnvScreenEffect::ReceiveMessage( int classID, bf_read &msg )
 
 				g_pScreenSpaceEffects->SetScreenSpaceEffectParams( "ep2_groggy", pKeys );
 			}
+#ifdef MAPBASE
+			else if ( m_nType == SCREENEFFECT_MAPBASE_CHROMATIC_BLUR || m_nType == SCREENEFFECT_MAPBASE_CHROMATIC_ABERRATION )
+			{
+				if( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() < 80 )
+					return;
+
+				// Create a keyvalue block to set these params
+				KeyValues *pKeys = new KeyValues( "keys" );
+				if ( pKeys == NULL )
+					return;
+
+				// Set our keys
+				pKeys->SetFloat( "duration", m_flDuration );
+				pKeys->SetInt( "fadeout", 1 );
+				pKeys->SetInt( "stretch", m_nType == SCREENEFFECT_MAPBASE_CHROMATIC_ABERRATION );
+
+				g_pScreenSpaceEffects->SetScreenSpaceEffectParams( "mapbase_chromatic_aberration", pKeys );
+			}
+#endif
 
 			break;
 	}

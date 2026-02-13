@@ -23,7 +23,7 @@ class CStringRegistry;
 // Codes are either one of the enumerated types below, or a string (similar to Windows resource IDs)
 typedef int AI_TaskFailureCode_t;
 
-enum AI_BaseTaskFailureCodes_t : AI_TaskFailureCode_t
+enum AI_BaseTaskFailureCodes_t
 {
 	NO_TASK_FAILURE,
 	FAIL_NO_TARGET,
@@ -493,6 +493,11 @@ enum sharedtasks_e
 		
 		// First task of all schedules for playing back scripted sequences
 		TASK_PRE_SCRIPT,
+
+#ifdef MAPBASE
+		// Faces the actual interaction angles instead of just facing the enemy
+		TASK_FACE_INTERACTION_ANGLES,
+#endif
 
 		// ======================================
 		// IMPORTANT: This must be the last enum

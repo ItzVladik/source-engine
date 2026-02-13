@@ -22,10 +22,10 @@ void CPointEntity::Spawn( void )
 }
 
 
-class CNullEntity : public CBaseEntity
+class CNullEntity : public CServerOnlyEntity
 {
 public:
-	DECLARE_CLASS( CNullEntity, CBaseEntity );
+	DECLARE_CLASS( CNullEntity, CServerOnlyEntity );
 
 	void Spawn( void );
 };
@@ -37,6 +37,11 @@ void CNullEntity::Spawn( void )
 	UTIL_Remove( this );
 }
 LINK_ENTITY_TO_CLASS(info_null,CNullEntity);
+
+#ifdef MAPBASE
+// Eh, good enough.
+LINK_ENTITY_TO_CLASS(func_null,CNullEntity);
+#endif
 
 class CBaseDMStart : public CPointEntity
 {

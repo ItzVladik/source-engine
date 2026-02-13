@@ -84,13 +84,11 @@ public:
 // Purpose: Stores a node graph through which an AI may pathfind
 //-----------------------------------------------------------------------------
 
-class CAI_Network : public IPartitionEnumerator, public IEntityListener
+class CAI_Network : public IPartitionEnumerator
 {
 public:
 	CAI_Network();
 	~CAI_Network();
-
-	void OnEntityDeleted( CBaseEntity *pEntity );
 
 	CAI_Node *		AddNode( const Vector &origin, float yaw );						// Returns a new node in the network
 	CAI_Link *		CreateLink( int srcID, int destID, CAI_DynamicLink *pDynamicLink = NULL );
@@ -129,8 +127,17 @@ public:
 	}
 	
 	CAI_Node**		AccessNodes() const	{ return m_pAInode; }
-	
 
+#ifdef MAPBASE_VSCRIPT
+	Vector		ScriptGetNodePosition( int nodeID ) { return GetNodePosition( HULL_HUMAN, nodeID ); }
+	Vector		ScriptGetNodePositionWithHull( int nodeID, int hull ) { return GetNodePosition( (Hull_t)hull, nodeID ); }
+
+	int			ScriptNearestNodeToPoint( const Vector &vecPosition, bool bCheckVisibility = true ) { return NearestNodeToPoint( NULL, vecPosition, bCheckVisibility ); }
+	int			ScriptNearestNodeToPointWithNPC( HSCRIPT hNPC, const Vector &vecPosition, bool bCheckVisibility = true );
+
+	HSCRIPT		ScriptGetNodeHint( int nodeID );
+	int			ScriptGetNodeType( int nodeID );
+#endif
 	
 private:
 	friend class CAI_NetworkManager;

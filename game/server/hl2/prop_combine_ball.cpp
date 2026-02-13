@@ -227,6 +227,10 @@ BEGIN_DATADESC( CPropCombineBall )
 	DEFINE_INPUTFUNC( FIELD_VOID, "FadeAndRespawn", InputFadeAndRespawn ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "Kill", InputKill ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "Socketed", InputSocketed ),
+#ifdef MAPBASE
+	DEFINE_INPUTFUNC( FIELD_FLOAT, "SetLifetime", InputSetLifetime ),
+	DEFINE_INPUTFUNC( FIELD_FLOAT, "AddLifetime", InputAddLifetime ),
+#endif
 
 END_DATADESC()
 
@@ -236,6 +240,21 @@ IMPLEMENT_SERVERCLASS_ST( CPropCombineBall, DT_PropCombineBall )
 	SendPropBool( SENDINFO( m_bHeld ) ),
 	SendPropBool( SENDINFO( m_bLaunched ) ),
 END_SEND_TABLE()
+
+#ifdef EZ2
+// Blixibon - Makes energy balls dodgable by hunters
+extern CUtlVector<CBaseEntity*> g_pDodgeableProjectiles;
+
+CPropCombineBall::CPropCombineBall()
+{
+	g_pDodgeableProjectiles.AddToTail( this );
+}
+
+CPropCombineBall::~CPropCombineBall()
+{
+	g_pDodgeableProjectiles.FindAndRemove( this );
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // Gets at the spawner
@@ -566,6 +585,10 @@ void CPropCombineBall::InputKill( inputdata_t &inputdata )
 		SetOwnerEntity( NULL );
 	}
 
+#ifdef MAPBASE
+	m_OnKilled.FireOutput( inputdata.pActivator, this );
+#endif
+
 	UTIL_Remove( this );
 
 	NotifySpawnerOfRemoval();
@@ -595,6 +618,86 @@ void CPropCombineBall::InputSocketed( inputdata_t &inputdata )
 
 	NotifySpawnerOfRemoval();
 }
+
+#ifdef MAPBASE
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CPropCombineBall::InputSetLifetime( inputdata_t &inputdata )
+{
+	if (m_bHeld)
+	{
+		// Special handling when held
+		float dt = inputdata.value.Float();
+		float flSoundRampTime = GetBallHoldDissolveTime() - GetBallHoldSoundRampTime();
+
+		if (dt > flSoundRampTime)
+		{
+			if ( m_pHoldingSound )
+			{
+				// Reset holding sound to regular pitch
+				CSoundEnvelopeController &controller = CSoundEnvelopeController::GetController();
+				controller.SoundChangePitch( m_pHoldingSound, 100, flSoundRampTime );
+			}
+
+			SetContextThink( &CPropCombineBall::DissolveRampSoundThink, gpGlobals->curtime + dt - flSoundRampTime, s_pHoldDissolveContext );
+		}
+		else
+		{
+			if ( m_pHoldingSound )
+			{
+				// Do pitch ramp based on our custom time, which is less than the normal pitch ramp time
+				CSoundEnvelopeController &controller = CSoundEnvelopeController::GetController();
+				controller.SoundChangePitch( m_pHoldingSound, 150, dt );
+			}
+			SetContextThink( &CPropCombineBall::DissolveThink, gpGlobals->curtime + dt, s_pHoldDissolveContext );
+		}
+	}
+	else
+	{
+		SetContextThink( &CPropCombineBall::ExplodeThink, gpGlobals->curtime + inputdata.value.Float(), s_pExplodeTimerContext );
+	}
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CPropCombineBall::InputAddLifetime( inputdata_t &inputdata )
+{
+	if (m_bHeld)
+	{
+		// Special handling when held
+		float dt = (GetNextThink( s_pHoldDissolveContext ) - gpGlobals->curtime + inputdata.value.Float());
+		float flSoundRampTime = GetBallHoldDissolveTime() - GetBallHoldSoundRampTime();
+
+		if (dt > flSoundRampTime)
+		{
+			if ( m_pHoldingSound )
+			{
+				// Reset holding sound to regular pitch
+				CSoundEnvelopeController &controller = CSoundEnvelopeController::GetController();
+				controller.SoundChangePitch( m_pHoldingSound, 100, flSoundRampTime );
+			}
+
+			SetContextThink( &CPropCombineBall::DissolveRampSoundThink, gpGlobals->curtime + dt - flSoundRampTime, s_pHoldDissolveContext );
+		}
+		else
+		{
+			if ( m_pHoldingSound )
+			{
+				// Do pitch ramp based on our custom time, which is less than the normal pitch ramp time
+				CSoundEnvelopeController &controller = CSoundEnvelopeController::GetController();
+				controller.SoundChangePitch( m_pHoldingSound, 150, dt );
+			}
+			SetContextThink( &CPropCombineBall::DissolveThink, gpGlobals->curtime + dt, s_pHoldDissolveContext );
+		}
+	}
+	else
+	{
+		SetContextThink( &CPropCombineBall::ExplodeThink, gpGlobals->curtime + (GetNextThink( s_pExplodeTimerContext ) + inputdata.value.Float()), s_pExplodeTimerContext );
+	}
+}
+#endif
 
 //-----------------------------------------------------------------------------
 // Cleanup. 
@@ -706,9 +809,63 @@ void CPropCombineBall::WhizSoundThink()
 	pPhysicsObject->GetPosition( &vecPosition, NULL );
 	pPhysicsObject->GetVelocity( &vecVelocity, NULL );
 	
-	if ( gpGlobals->maxClients == 1 )
+	// Multiplayer equivelent, loops through players and decides if it should go or not, like SP.
+	if ( gpGlobals->maxClients > 1 )
+	{
+		CBasePlayer *pPlayer = NULL;
+
+		for (int i = 1;i <= gpGlobals->maxClients; i++)
+		{
+			pPlayer = UTIL_PlayerByIndex( i );
+			if ( pPlayer )
+			{
+				Vector vecDelta;
+				VectorSubtract( pPlayer->GetAbsOrigin(), vecPosition, vecDelta );
+				VectorNormalize( vecDelta );
+				if ( DotProduct( vecDelta, vecVelocity ) > 0.5f )
+				{
+					Vector vecEndPoint;
+					VectorMA( vecPosition, 2.0f * TICK_INTERVAL, vecVelocity, vecEndPoint );
+					float flDist = CalcDistanceToLineSegment( pPlayer->GetAbsOrigin(), vecPosition, vecEndPoint );
+					if ( flDist < 200.0f )
+					{
+						// We're basically doing what CPASAttenuationFilter does, on a per-user basis, if it passes we create the filter and send off the sound
+						// if it doesn't, we skip the player.
+						float distance, maxAudible;
+						Vector vecRelative;
+
+						VectorSubtract( pPlayer->EarPosition(), vecPosition, vecRelative );
+						distance = VectorLength( vecRelative );
+						maxAudible = ( 2 * SOUND_NORMAL_CLIP_DIST ) / ATTN_NORM;
+						if ( distance <= maxAudible )
+							continue;
+
+						// Set the recipient to the player it checked against so multiple sounds don't play.
+						CSingleUserRecipientFilter filter( pPlayer );
+
+						EmitSound_t ep;
+						ep.m_nChannel = CHAN_STATIC;
+						if ( hl2_episodic.GetBool() )
+						{
+							ep.m_pSoundName = "NPC_CombineBall_Episodic.WhizFlyby";
+						}
+						else
+						{
+							ep.m_pSoundName = "NPC_CombineBall.WhizFlyby";
+						}
+						ep.m_flVolume = 1.0f;
+						ep.m_SoundLevel = SNDLVL_NORM;
+
+						EmitSound( filter, entindex(), ep );
+					}
+				}
+			}
+		}
+	}
+	else
 	{
 		CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+
 		if ( pPlayer )
 		{
 			Vector vecDelta;
@@ -743,6 +900,7 @@ void CPropCombineBall::WhizSoundThink()
 				}
 			}
 		}
+
 	}
 
 	SetContextThink( &CPropCombineBall::WhizSoundThink, gpGlobals->curtime + 2.0f * TICK_INTERVAL, s_pWhizThinkContext );
@@ -936,6 +1094,113 @@ void CPropCombineBall::OnPhysGunDrop( CBasePlayer *pPhysGunUser, PhysGunDrop_t R
 	SetBallAsLaunched();
 	StopAnimating();
 }
+
+#ifdef MAPBASE
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CPropCombineBall::SpawnerDestroyed( CBaseEntity *pActivator, bool *bSeekEnemy )
+{
+	SetState( STATE_THROWN );
+	WhizSoundThink();
+
+	m_bHeld = false;
+	m_bLaunched = true;
+
+	// Stop with the dissolving
+	SetContextThink( NULL, gpGlobals->curtime, s_pHoldDissolveContext );
+
+	// We're ready to start colliding again.
+	SetCollisionGroup( HL2COLLISION_GROUP_COMBINE_BALL );
+
+	if ( m_pGlowTrail )
+	{
+		m_pGlowTrail->TurnOn();
+		m_pGlowTrail->SetRenderColor( 255, 255, 255, 255 );
+	}
+
+	// Set our desired speed to be launched at
+	SetSpeed( 1500.0f );
+
+	SetOwnerEntity( pActivator );
+	SetWeaponLaunched( false );
+
+	if (!VPhysicsGetObject())
+		return;
+
+	if (pActivator->IsPlayer())
+	{
+		PhysClearGameFlags( VPhysicsGetObject(), FVPHYSICS_NO_NPC_IMPACT_DMG );
+		PhysSetGameFlags( VPhysicsGetObject(), FVPHYSICS_DMG_DISSOLVE | FVPHYSICS_HEAVY_OBJECT );
+	}
+	else
+	{
+		// Don't do impact damage. Just touch them and do your dissolve damage and move on.
+		PhysSetGameFlags( VPhysicsGetObject(), FVPHYSICS_NO_NPC_IMPACT_DMG );
+	}
+
+	//if (pActivator->IsPlayer())
+	//{
+	//	SetPlayerLaunched( ToBasePlayer( pActivator ) );
+	//}
+
+	Vector vecVelocity;
+
+	if (bSeekEnemy)
+	{
+		CBaseEntity *pBestTarget = NULL;
+		CBaseEntity *list[256];
+
+		float	distance;
+		float	flBestDist = MAX_COORD_FLOAT;
+		int nCount = UTIL_EntitiesInSphere( list, 256, GetAbsOrigin(), sk_combine_ball_search_radius.GetFloat(), FL_NPC | FL_CLIENT );
+		
+		for ( int i = 0; i < nCount; i++ )
+		{
+			if ( !IsAttractiveTarget( list[i] ) )
+				continue;
+
+			distance = (list[i]->WorldSpaceCenter() - GetAbsOrigin()).LengthSqr();
+			if ( distance < flBestDist )
+			{
+				pBestTarget = list[i];
+				flBestDist = distance;
+			}
+		}
+
+		if ( pBestTarget )
+		{
+			VectorSubtract( pBestTarget->WorldSpaceCenter(), GetAbsOrigin(), vecVelocity );
+			VectorNormalize( vecVelocity );
+		}
+
+		*bSeekEnemy = (pBestTarget != NULL);
+	}
+
+	if (bSeekEnemy == NULL || *bSeekEnemy == false)
+	{
+		// Choose a random direction based on current velocity
+		VPhysicsGetObject()->GetVelocity( &vecVelocity, NULL );
+		VectorNormalize( vecVelocity );
+
+		QAngle shotAng;
+		VectorAngles( vecVelocity, shotAng );
+
+		// Offset by some small cone
+		shotAng[PITCH] += random->RandomInt( -75, 75 );
+		shotAng[YAW] += random->RandomInt( -75, 75 );
+
+		AngleVectors( shotAng, &vecVelocity, NULL, NULL );
+	}
+
+	vecVelocity *= GetSpeed();
+
+	VPhysicsGetObject()->SetVelocity( &vecVelocity, &vec3_origin );
+
+	SetBallAsLaunched();
+	StopAnimating();
+}
+#endif
 
 //------------------------------------------------------------------------------
 // Stop looping sounds
@@ -1165,6 +1430,17 @@ bool CPropCombineBall::DissolveEntity( CBaseEntity *pEntity )
 	if( pEntity->IsEFlagSet( EFL_NO_DISSOLVE ) )
 		return false;
 
+#ifdef EZ1
+	// Hackhack!
+	// The final boss of Entropy : Zero has a different health value and is not dissolvable by Combine energy balls.
+	// Not using EFL_NO_DISSOLVE because of strange behavior in testing
+	if (pEntity->NameMatches( "Zilazane" ))
+	{
+		return false;
+	}
+#endif
+
+
 #ifdef HL2MP
 	if ( pEntity->IsPlayer() )
 	{
@@ -1245,6 +1521,12 @@ void CPropCombineBall::OnHitEntity( CBaseEntity *pHitEntity, float flSpeed, int 
 						m_flNextDamageTime = gpGlobals->curtime + 0.1f;
 					}
 
+#ifdef MAPBASE
+					// Damage forces for NPC balls.
+					info.SetDamagePosition( GetAbsOrigin() );
+					info.SetDamageForce( GetAbsVelocity() );
+#endif
+
 					pHitEntity->TakeDamage( info );
 				}
 			}
@@ -1282,10 +1564,75 @@ void CPropCombineBall::OnHitEntity( CBaseEntity *pHitEntity, float flSpeed, int 
 	}
 	else
 	{
+#ifdef EZ2
+		// 
+		// Blixibon - E:Z2 balls try to seek enemies one after the other.
+		// 
+
+		// Don't slow down when hitting other entities.
+		// Do this before we begin our seeking code in case it doesn't finish.
+		vecFinalVelocity = pEvent->postVelocity[index];
+		VectorNormalize( vecFinalVelocity );
+		vecFinalVelocity *= GetSpeed();
+
+		// On Easy, the first 3 bounces always seek another target.
+		// On Medium, it's the first 2 bounces.
+		// On Hard, it's only the first bounce.
+		// After that, it's random. The more bounces we've had, the less likely we are to seek.
+		if ( RandomInt(0, m_nBounceCount) < (4 - g_pGameRules->GetSkillLevel()) )
+		{
+			CBaseEntity *pBestTarget = NULL;
+			CBaseEntity *list[256];
+
+			Vector vecStartPoint, vecVelDir, vecDelta;
+			pEvent->pInternalData->GetContactPoint( vecStartPoint );
+			vecVelDir = pEvent->postVelocity[index];
+			VectorNormalize( vecVelDir );
+
+			float	distance;
+			float	flBestDist = MAX_COORD_FLOAT;
+			int nCount = UTIL_EntitiesInSphere( list, 256, GetAbsOrigin(), sk_combine_ball_search_radius.GetFloat(), FL_NPC | FL_CLIENT );
+			
+			for ( int i = 0; i < nCount; i++ )
+			{
+				if ( !IsAttractiveTarget( list[i] ) )
+					continue;
+
+				VectorSubtract( list[i]->WorldSpaceCenter(), vecStartPoint, vecDelta );
+				distance = VectorNormalize( vecDelta );
+
+				if ( distance < flBestDist )
+				{
+					// Check our direction
+					if ( DotProduct( vecDelta, vecVelDir ) > 0.0f )
+					{
+						pBestTarget = list[i];
+						flBestDist = distance;
+					}
+				}
+			}
+
+			if ( pBestTarget )
+			{
+				Msg("Found %s on %i bounce\n", pBestTarget->GetDebugName(), m_nBounceCount);
+
+				VectorSubtract( pBestTarget->WorldSpaceCenter(), vecStartPoint, vecFinalVelocity );
+				VectorNormalize( vecFinalVelocity );
+				vecFinalVelocity *= GetSpeed();
+			}
+			else
+			{
+				Msg("Didn't find a target on %i bounce\n", m_nBounceCount);
+			}
+
+			++m_nBounceCount;
+		}
+#else
 		// Don't slow down when hitting other entities.
 		vecFinalVelocity = pEvent->postVelocity[index];
 		VectorNormalize( vecFinalVelocity );
 		vecFinalVelocity *= GetSpeed();
+#endif
 	}
 	PhysCallbackSetVelocity( pEvent->pObjects[index], vecFinalVelocity ); 
 }
@@ -1361,6 +1708,7 @@ bool CPropCombineBall::IsAttractiveTarget( CBaseEntity *pEntity )
 	{
 		
 #ifndef HL2MP
+#ifndef EZ
 		if ( GetOwnerEntity() ) 
 		{
 			// Things we check if this ball has an owner that's not an NPC.
@@ -1375,6 +1723,7 @@ bool CPropCombineBall::IsAttractiveTarget( CBaseEntity *pEntity )
 				}
 			}
 		}
+#endif
 
 		// The default case.
 		if ( !pEntity->IsNPC() )
@@ -1382,6 +1731,12 @@ bool CPropCombineBall::IsAttractiveTarget( CBaseEntity *pEntity )
 
 		if( pEntity->Classify() == CLASS_BULLSEYE )
 			return false;
+
+#ifdef EZ2
+		// Blixibon - Don't seek the player dummy or NPCs that like the owner
+		if ( pEntity->GetOwnerEntity() == GetOwnerEntity() || pEntity->MyNPCPointer()->IRelationType(GetOwnerEntity()) > D_FR )
+			return false;
+#endif
 
 #else
 		if ( pEntity->IsPlayer() == false )
@@ -1400,7 +1755,12 @@ bool CPropCombineBall::IsAttractiveTarget( CBaseEntity *pEntity )
 
 		// We must be able to hit them
 		trace_t	tr;
+#ifdef EZ2
+		// Trace through NPCs
+		UTIL_TraceLine( WorldSpaceCenter(), pEntity->BodyTarget( WorldSpaceCenter() ), MASK_SOLID_BRUSHONLY, this, COLLISION_GROUP_NONE, &tr );
+#else
 		UTIL_TraceLine( WorldSpaceCenter(), pEntity->BodyTarget( WorldSpaceCenter() ), MASK_SOLID, this, COLLISION_GROUP_NONE, &tr );
+#endif
 
 		if ( tr.fraction < 1.0f && tr.m_pEnt != pEntity )
 			return false;
@@ -1700,6 +2060,9 @@ BEGIN_DATADESC( CFuncCombineBallSpawner )
 
 	DEFINE_INPUTFUNC( FIELD_VOID, "Enable", InputEnable ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "Disable", InputDisable ),
+#ifdef MAPBASE
+	DEFINE_INPUTFUNC( FIELD_VOID, "Destroy", InputDestroy ),
+#endif
 
 	DEFINE_OUTPUT( m_OnBallGrabbed, "OnBallGrabbed" ),
 	DEFINE_OUTPUT( m_OnBallReinserted, "OnBallReinserted" ),
@@ -1851,6 +2214,35 @@ void CFuncCombineBallSpawner::InputDisable( inputdata_t &inputdata )
 
 	SetThink( NULL );
 }
+
+#ifdef MAPBASE
+void CFuncCombineBallSpawner::InputDestroy( inputdata_t &inputdata )
+{
+	if ( !m_bEnabled )
+	{
+		UTIL_Remove( this );
+		return;
+	}
+
+	// One ball always seeks the nearest enemy
+	bool bSoughtEnemy = false;
+
+	CBaseEntity *pEnt = gEntList.FindEntityByClassname( NULL, "prop_combine_ball" );
+	while (pEnt)
+	{
+		CPropCombineBall *pBall = static_cast<CPropCombineBall*>(pEnt);
+		if (pBall && pBall->GetSpawner() == this)
+		{
+			BallGrabbed( pBall );
+			pBall->SpawnerDestroyed( inputdata.pActivator, bSoughtEnemy ? NULL : &bSoughtEnemy );
+		}
+
+		pEnt = gEntList.FindEntityByClassname( pEnt, "prop_combine_ball" );
+	}
+
+	UTIL_Remove( this );
+}
+#endif
 
 	
 //-----------------------------------------------------------------------------
