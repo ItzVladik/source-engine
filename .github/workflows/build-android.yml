@@ -10,16 +10,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: Preparing to building
       run: |
-        git clone https://github.com/ItzVladik/srceng-mod-launcher
         sudo apt-get update
         sudo apt-get install -f -y openjdk-17-jdk zip apksigner imagemagick lib32z1
-    - name: Build Android (32 bit)
-      run: |
-        scripts/build-android-armv7a.sh
-    - name: Build Android (64 bit)
-      run: |
-        chmod +x scripts/build-android-aarch64.sh
-        scripts/build-android-aarch64.sh   
     - name: Build APK
       run: |
         chmod +x scripts/build-apk.sh
