@@ -320,6 +320,22 @@ struct datamap_t
 	template <typename T> friend void DataMapAccess(T *, datamap_t **p); \
 	template <typename T> friend datamap_t *DataMapInit(T *);
 
+#if defined(POSIX) && !defined(_PS3)
+
+#define DECLARE_SIMPLE_DATADESC_INSIDE_NAMESPACE() \
+	static datamap_t m_DataMap; \
+	static datamap_t *GetBaseMap(); \
+	template <typename T> friend void ::DataMapAccess(T *, datamap_t **p); 
+
+#else
+#define DECLARE_SIMPLE_DATADESC_INSIDE_NAMESPACE() \
+	static datamap_t m_DataMap; \
+	static datamap_t *GetBaseMap(); \
+	template <typename T> friend void ::DataMapAccess(T *, datamap_t **p); \
+	template <typename T> friend datamap_t *::DataMapInit(T *);
+
+#endif
+
 #define	DECLARE_DATADESC() \
 	DECLARE_SIMPLE_DATADESC() \
 	virtual datamap_t *GetDataDescMap( void );
@@ -455,6 +471,10 @@ private:
 };
 
 //-----------------------------------------------------------------------------
+
+// Compiler can require the global-namespace template friend to be declared
+// before DECLARE_SIMPLE_DATADESC_INSIDE_NAMESPACE() can be used
+template <typename T> datamap_t *DataMapInit(T *);
 
 #include "tier0/memdbgoff.h"
 
