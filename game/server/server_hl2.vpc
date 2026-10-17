@@ -250,6 +250,27 @@ $Project "Server (HL2)"
 			$File	"hl2\weapon_stunstick.cpp"
 			$File	"hl2\weapon_stunstick.h"
 
+			$Folder	"Underhell"
+			{
+				$File	"underhell\npc_ace.cpp"
+				$File	"underhell\npc_butcher.cpp"
+				$File	"underhell\npc_infected.cpp"
+				$File	"underhell\uh_ai.cpp"
+				$File	"underhell\uh_bullettime.cpp"
+				$File	"underhell\uh_carry_ragdoll.cpp"
+				$File	"underhell\uh_gear.cpp"
+				$File	"underhell\uh_ironsight.cpp"
+				$File	"underhell\uh_items.cpp"
+				$File	"underhell\uh_kick.cpp"
+				$File	"underhell\uh_leftarm.cpp"
+				$File	"underhell\uh_player_endurance.cpp"
+				$File	"underhell\uh_player_inventory.cpp"
+				$File	"underhell\uh_player_model.cpp"
+				$File	"underhell\uh_player_objectives.cpp"
+				$File	"underhell\uh_weapons.cpp"
+				$File	"$SRCDIR\game\shared\underhell\uh_inventory.cpp"
+			}
+
 			$Folder	"Unused"
 			{
 				$File	"hl2\grenade_beam.cpp"

@@ -162,6 +162,10 @@ public:
 	
 	CBaseCombatWeapon		*GetWeapon() const { return m_hWeapon.Get(); }
 
+	float					m_expFactor;
+	void					SetExpSighted( bool bSighted ) { m_bExpSighted = bSighted; }
+	bool					IsExpSighted( void ) const { return m_bExpSighted; }
+
 #ifdef CLIENT_DLL
 	virtual bool			ShouldResetSequenceOnNewModel( void ) { return false; }
 
@@ -179,6 +183,7 @@ private:
 #endif
 
 private:
+	CNetworkVar( bool, m_bExpSighted );
 	CNetworkVar( int, m_nViewModelIndex );		// Which viewmodel is it?
 	CNetworkHandle( CBaseEntity, m_hOwner );				// Player or AI carrying this weapon
 

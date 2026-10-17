@@ -7,6 +7,9 @@
 //===========================================================================//
 #include "cbase.h"
 #include "c_baseplayer.h"
+#ifdef HL2_CLIENT_DLL
+#include "c_basehlplayer.h"
+#endif
 #include "flashlighteffect.h"
 #include "weapon_selection.h"
 #include "history_resource.h"
@@ -411,6 +414,7 @@ C_BasePlayer::C_BasePlayer() : m_iv_vecViewOffset( "C_BasePlayer::m_iv_vecViewOf
 #endif
 
 	m_pFlashlight = NULL;
+	m_angOTSRenderAngles.Init();
 
 	m_pCurrentVguiScreen = NULL;
 	m_pCurrentCommand = NULL;
@@ -1217,11 +1221,40 @@ void C_BasePlayer::UpdateFlashlight()
 			m_pFlashlight->TurnOn();
 		}
 
-		Vector vecForward, vecRight, vecUp;
-		EyeVectors( &vecForward, &vecRight, &vecUp );
+		Vector lightOrigin = EyePosition();
+		QAngle lightAngles = EyeAngles();
+		int lightDistance = FLASHLIGHT_DISTANCE;
 
-		// Update the light with the new position and direction.		
-		m_pFlashlight->UpdateLight( EyePosition(), vecForward, vecRight, vecUp, FLASHLIGHT_DISTANCE );
+		C_BaseCombatWeapon *pWeapon = GetActiveWeapon();
+		if ( pWeapon && AllowOvertheShoulderView() )
+		{
+			int attachment = pWeapon->LookupAttachment( "muzzle_flash" );
+			if ( attachment > 0 )
+				pWeapon->GetAttachment( attachment, lightOrigin, lightAngles );
+			else
+			{
+				Vector aimForward;
+				AngleVectors( lightAngles, &aimForward );
+				lightOrigin += aimForward * VEC_HULL_MAX.Length2D();
+			}
+			lightDistance = 0;
+		}
+#ifdef HL2_CLIENT_DLL
+		else
+		{
+			C_BaseHLPlayer *pHLPlayer = dynamic_cast<C_BaseHLPlayer *>( this );
+			if ( pHLPlayer && !pHLPlayer->m_bShoulderFlashlight )
+			{
+				C_BaseViewModel *pFlashlightVM = GetViewModel( 1 );
+				int attachment = pFlashlightVM ? pFlashlightVM->LookupAttachment( "Flashlight" ) : 0;
+				if ( attachment > 0 )
+					pFlashlightVM->GetAttachment( attachment, lightOrigin, lightAngles );
+			}
+		}
+#endif
+		Vector vecForward, vecRight, vecUp;
+		AngleVectors( lightAngles, &vecForward, &vecRight, &vecUp );
+		m_pFlashlight->UpdateLight( lightOrigin, vecForward, vecRight, vecUp, lightDistance );
 	}
 	else if (m_pFlashlight)
 	{
@@ -1383,9 +1416,34 @@ bool C_BasePlayer::ShouldInterpolate()
 }
 
 
+ShadowType_t C_BasePlayer::ShadowCastType()
+{
+	if ( IsLocalPlayer() && !AllowOvertheShoulderView() )
+		return SHADOWS_NONE;
+	return SHADOWS_RENDER_TO_TEXTURE_DYNAMIC;
+}
+
 bool C_BasePlayer::ShouldDraw()
 {
+	if ( IsLocalPlayer() && IsMirrorOnly() )
+		return BaseClass::ShouldDraw();
 	return ShouldDrawThisPlayer() && BaseClass::ShouldDraw();
+}
+
+bool C_BasePlayer::AllowOvertheShoulderView( void )
+{
+	return IsAlive() && !IsObserver() && !IsInAVehicle() && ::input->CAM_IsThirdPerson();
+}
+
+const QAngle& C_BasePlayer::GetRenderAngles( void )
+{
+	const QAngle &angles = BaseClass::GetRenderAngles();
+	if ( IsLocalPlayer() && AllowOvertheShoulderView() )
+	{
+		m_angOTSRenderAngles.Init( 0.0f, angles.y, 0.0f );
+		return m_angOTSRenderAngles;
+	}
+	return angles;
 }
 
 int C_BasePlayer::DrawModel( int flags )

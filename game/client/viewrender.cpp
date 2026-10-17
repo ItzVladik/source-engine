@@ -63,6 +63,10 @@
 #define USE_MONITORS
 #endif
 #include "rendertexture.h"
+#ifdef HL2_CLIENT_DLL
+#include "hl2/c_basehlplayer.h"
+#include "baseviewmodel_shared.h"
+#endif
 #include "viewpostprocess.h"
 #include "viewdebug.h"
 
@@ -163,6 +167,7 @@ static ConVar r_screenfademinsize( "r_screenfademinsize", "0" );
 static ConVar r_screenfademaxsize( "r_screenfademaxsize", "0" );
 static ConVar cl_drawmonitors( "cl_drawmonitors", "1" );
 static ConVar r_eyewaterepsilon( "r_eyewaterepsilon", "10.0f", FCVAR_CHEAT );
+bool g_bRenderingReflectiveGlass = false;
 
 #ifdef TF_CLIENT_DLL
 static ConVar pyro_dof( "pyro_dof", "1", FCVAR_ARCHIVE );
@@ -1953,15 +1958,18 @@ void CViewRender::RenderView( const CViewSetup &view, int nClearFlags, int whatT
 
 		g_pClientShadowMgr->AdvanceFrame();
 
-	#ifdef USE_MONITORS
-		if ( cl_drawmonitors.GetBool() && 
-			( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 70 ) &&
-			( ( whatToDraw & RENDERVIEW_SUPPRESSMONITORRENDERING ) == 0 ) )
+#ifdef USE_MONITORS
+		if ( ( whatToDraw & RENDERVIEW_SUPPRESSMONITORRENDERING ) == 0 )
 		{
-			CViewSetup viewMiddle = GetView( STEREO_EYE_MONO );
-			DrawMonitors( viewMiddle );	
+			DrawScope( view );
+			if ( cl_drawmonitors.GetBool() &&
+				( g_pMaterialSystemHardwareConfig->GetDXSupportLevel() >= 70 ) )
+			{
+				CViewSetup viewMiddle = GetView( STEREO_EYE_MONO );
+				DrawMonitors( viewMiddle );
+			}
 		}
-	#endif
+#endif
 
 		g_bRenderingView = true;
 
@@ -3088,6 +3096,54 @@ bool CViewRender::DrawOneMonitor( ITexture *pRenderTarget, int cameraNum, C_Poin
 	return true;
 }
 
+static ConVar r_scope_fov( "r_scope_fov", "10", 0 );
+
+void CViewRender::DrawScope( const CViewSetup &cameraView )
+{
+#ifdef HL2_CLIENT_DLL
+	C_BaseHLPlayer *pPlayer = dynamic_cast<C_BaseHLPlayer *>( C_BasePlayer::GetLocalPlayer() );
+	if ( !pPlayer )
+		return;
+	C_BaseViewModel *pViewModel = pPlayer->GetViewModel( 0 );
+	if ( !pViewModel || !pPlayer->GetActiveWeapon() )
+		return;
+
+	int iScopeAttachment = pViewModel->LookupAttachment( "Scope" );
+	if ( iScopeAttachment <= 0 )
+		return;
+
+	ITexture *pScopeTarget = GetScopeTexture();
+	if ( !pScopeTarget || IsErrorTexture( pScopeTarget ) )
+		return;
+
+	CViewSetup scopeView = cameraView;
+	if ( !pPlayer->m_bIronSighted )
+	{
+		Vector vecOrigin;
+		QAngle vecAngles;
+		if ( pViewModel->GetAttachment( iScopeAttachment, vecOrigin, vecAngles ) )
+		{
+			scopeView.origin = vecOrigin;
+			scopeView.angles = vecAngles;
+		}
+	}
+	scopeView.x = scopeView.y = 0;
+	scopeView.width = pScopeTarget->GetActualWidth();
+	scopeView.height = pScopeTarget->GetActualHeight();
+	scopeView.fov = r_scope_fov.GetFloat();
+	scopeView.m_bOrtho = false;
+
+	CMatRenderContextPtr pRenderContext( materials );
+	pRenderContext->PushRenderTargetAndViewport( pScopeTarget );
+	pRenderContext.SafeRelease();
+	RenderView( scopeView, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR,
+		RENDERVIEW_SUPPRESSMONITORRENDERING );
+	pRenderContext.GetFrom( materials );
+	pRenderContext->PopRenderTargetAndViewport();
+	m_CurrentView = cameraView;
+#endif
+}
+
 void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 {
 #ifdef PORTAL
@@ -3103,16 +3159,11 @@ void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 
 	tmZone( TELEMETRY_LEVEL0, TMZF_NONE, "%s", __FUNCTION__ );
 
-#ifdef _DEBUG
 	g_bRenderingCameraView = true;
-#endif
+	const bool bOldMirrorPass = g_bRenderingReflectiveGlass;
+	g_bRenderingReflectiveGlass = true;
 
-	// FIXME: this should check for the ability to do a render target maybe instead.
-	// FIXME: shouldn't have to truck through all of the visible entities for this!!!!
 	ITexture *pCameraTarget = GetCameraTexture();
-	int width = pCameraTarget->GetActualWidth();
-	int height = pCameraTarget->GetActualHeight();
-
 	C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
 	
 	int cameraNum;
@@ -3121,7 +3172,14 @@ void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 		if ( !pCameraEnt->IsActive() || pCameraEnt->IsDormant() )
 			continue;
 
-		if ( !DrawOneMonitor( pCameraTarget, cameraNum, pCameraEnt, cameraView, player, 0, 0, width, height ) )
+		ITexture *pThisTarget = pCameraEnt->UsesCustomRenderTarget()
+			? GetCustomCameraTexture( pCameraEnt->GetRenderTargetIndex() ) : pCameraTarget;
+		if ( !pThisTarget || IsErrorTexture( pThisTarget ) )
+			continue;
+
+		int width = pThisTarget->GetActualWidth();
+		int height = pThisTarget->GetActualHeight();
+		if ( !DrawOneMonitor( pThisTarget, cameraNum, pCameraEnt, cameraView, player, 0, 0, width, height ) )
 			continue;
 
 		++cameraNum;
@@ -3137,9 +3195,8 @@ void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 		pRenderContext->PopRenderTargetAndViewport();
 	}
 
-#ifdef _DEBUG
 	g_bRenderingCameraView = false;
-#endif
+	g_bRenderingReflectiveGlass = bOldMirrorPass;
 
 #endif // USE_MONITORS
 }
@@ -6159,8 +6216,10 @@ void CReflectiveGlassView::Draw()
 	// Disable occlusion visualization in reflection
 	bool bVisOcclusion = r_visocclusion.GetInt();
 	r_visocclusion.SetValue( 0 );
-				   
+
+	g_bRenderingReflectiveGlass = true;
 	BaseClass::Draw();
+	g_bRenderingReflectiveGlass = false;
 
 	r_visocclusion.SetValue( bVisOcclusion );
 
@@ -6225,7 +6284,9 @@ void CRefractiveGlassView::Draw()
 	CMatRenderContextPtr pRenderContext( materials );
 	PIXEVENT( pRenderContext, "CRefractiveGlassView::Draw" );
 
+	g_bRenderingReflectiveGlass = true;
 	BaseClass::Draw();
+	g_bRenderingReflectiveGlass = false;
 
 	pRenderContext->ClearColor4ub( 0, 0, 0, 255 );
 	pRenderContext->Flush();

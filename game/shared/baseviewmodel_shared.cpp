@@ -51,6 +51,8 @@ CBaseViewModel::CBaseViewModel()
 	m_sAnimationPrefix	= NULL_STRING;
 
 	m_nViewModelIndex	= 0;
+	m_bExpSighted = false;
+	m_expFactor = 0.0f;
 
 	m_nAnimationParity	= 0;
 }
@@ -561,6 +563,7 @@ BEGIN_NETWORK_TABLE_NOBASE(CBaseViewModel, DT_BaseViewModel)
 	SendPropInt		(SENDINFO(m_nBody), 8),
 	SendPropInt		(SENDINFO(m_nSkin), 10),
 	SendPropInt		(SENDINFO(m_nSequence),	8, SPROP_UNSIGNED),
+	SendPropBool	(SENDINFO(m_bExpSighted)),
 	SendPropInt		(SENDINFO(m_nViewModelIndex), VIEWMODEL_INDEX_BITS, SPROP_UNSIGNED),
 	SendPropFloat	(SENDINFO(m_flPlaybackRate),	8,	SPROP_ROUNDUP,	-4.0,	12.0f),
 	SendPropInt		(SENDINFO(m_fEffects),		10, SPROP_UNSIGNED),
@@ -580,6 +583,7 @@ BEGIN_NETWORK_TABLE_NOBASE(CBaseViewModel, DT_BaseViewModel)
 	RecvPropInt		(RECVINFO(m_nSkin)),
 	RecvPropInt		(RECVINFO(m_nBody)),
 	RecvPropInt		(RECVINFO(m_nSequence), 0, RecvProxy_SequenceNum ),
+	RecvPropBool	(RECVINFO(m_bExpSighted)),
 	RecvPropInt		(RECVINFO(m_nViewModelIndex)),
 	RecvPropFloat	(RECVINFO(m_flPlaybackRate)),
 	RecvPropInt		(RECVINFO(m_fEffects), 0, RecvProxy_EffectFlags ),

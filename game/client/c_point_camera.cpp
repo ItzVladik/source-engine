@@ -25,6 +25,8 @@ IMPLEMENT_CLIENTCLASS_DT( C_PointCamera, DT_PointCamera, CPointCamera )
 	RecvPropFloat( RECVINFO( m_flFogMaxDensity ) ), 
 	RecvPropInt( RECVINFO( m_bActive ) ),
 	RecvPropInt( RECVINFO( m_bUseScreenAspectRatio ) ),
+	RecvPropInt( RECVINFO( m_iRenderTargetindex ) ),
+	RecvPropInt( RECVINFO( m_bCustomTexture ) ),
 END_RECV_TABLE()
 
 C_EntityClassList<C_PointCamera> g_PointCameraList;
@@ -39,6 +41,8 @@ C_PointCamera::C_PointCamera()
 {
 	m_bActive = false;
 	m_bFogEnable = false;
+	m_iRenderTargetindex = 0;
+	m_bCustomTexture = false;
 
 	g_PointCameraList.Insert( this );
 }

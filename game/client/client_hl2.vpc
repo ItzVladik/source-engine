@@ -111,6 +111,26 @@ $Project "Client (HL2)"
 			$File	"hl2\shieldproxy.cpp"
 			$File	"hl2\vgui_rootpanel_hl2.cpp"
 			$File 	"episodic\c_vort_charge_token.cpp"
+
+			$Folder	"Underhell"
+			{
+				$File	"underhell\c_btbullet.cpp"
+				$File	"underhell\c_inventory_panel.cpp"
+				$File	"underhell\c_uh_weapons.cpp"
+				$File	"underhell\hud_bleeding.cpp"
+				$File	"underhell\hud_dotreticle.cpp"
+				$File	"underhell\hud_endurance.cpp"
+				$File	"underhell\hud_grenadeammo.cpp"
+				$File	"underhell\hud_hermitcards.cpp"
+				$File	"underhell\hud_stamina.cpp"
+				$File	"underhell\hud_uhbattery.cpp"
+				$File	"underhell\shadereditor\uh_shadereditor_system.cpp"
+				$File	"underhell\uh_entglow.cpp"
+				$File	"underhell\uh_gear_overlay.cpp"
+				$File	"underhell\uh_ironsight.cpp"
+				$File	"underhell\uh_laser.cpp"
+				$File	"$SRCDIR\game\shared\underhell\uh_inventory.cpp"
+			}
 		}
 	}
 }
