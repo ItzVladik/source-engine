@@ -77,6 +77,7 @@ public:
 public:
 
 	bool	IsRunningEnterExitAnim( void ) { return m_bEnterAnimOn || m_bExitAnimOn; }
+	bool	IsPlayerAtGun( void ) const { return m_bPlayerAtGun; }
 	// NVNT added to check if the vehicle needs to aim
 	virtual bool HasGun(void){return m_bHasGun;}
 
@@ -116,6 +117,7 @@ protected:
 	float						m_flSequenceChangeTime;
 	bool						m_bEnterAnimOn;
 	bool						m_bExitAnimOn;
+	bool						m_bPlayerAtGun;
 	float						m_flFOV;
 
 	Vector						m_vecGunCrosshair;

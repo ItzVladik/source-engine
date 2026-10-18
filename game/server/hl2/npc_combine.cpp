@@ -1350,7 +1350,7 @@ Activity CNPC_Combine::NPC_TranslateActivity( Activity eNewActivity )
 //-----------------------------------------------------------------------------
 int CNPC_Combine::GetSoundInterests( void )
 {
-	return	SOUND_WORLD | SOUND_COMBAT | SOUND_PLAYER | SOUND_DANGER | SOUND_PHYSICS_DANGER | SOUND_BULLET_IMPACT | SOUND_MOVE_AWAY;
+	return	SOUND_WORLD | SOUND_COMBAT | SOUND_PLAYER | SOUND_DANGER | SOUND_PHYSICS_DANGER | SOUND_BULLET_IMPACT | SOUND_MOVE_AWAY | SOUND_FMRADIO;
 }
 
 //-----------------------------------------------------------------------------
@@ -1840,11 +1840,11 @@ int CNPC_Combine::SelectSchedule( void )
 				}
 			}
 
-			if( HasCondition( COND_HEAR_COMBAT ) )
+			if( HasCondition( COND_HEAR_COMBAT ) || HasCondition( COND_HEAR_FMRADIO ) )
 			{
 				CSound *pSound = GetBestSound();
 
-				if( pSound && pSound->IsSoundType( SOUND_COMBAT ) )
+				if( pSound && ( pSound->IsSoundType( SOUND_COMBAT ) || pSound->IsSoundType( SOUND_FMRADIO ) ) )
 				{
 					if( m_pSquad && m_pSquad->GetSquadMemberNearestTo( pSound->GetSoundReactOrigin() ) == this && OccupyStrategySlot( SQUAD_SLOT_INVESTIGATE_SOUND ) )
 					{

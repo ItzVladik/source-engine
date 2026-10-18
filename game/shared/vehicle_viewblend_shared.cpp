@@ -215,7 +215,11 @@ void SharedVehicleViewSmoothing(CBasePlayer *pPlayer,
 								ViewSmoothingData_t *pData, 
 								float *pFOV )
 {
-	int eyeAttachmentIndex = pData->pVehicle->LookupAttachment( "vehicle_driver_eyes" );
+	const char *pszEyeAttachment = "vehicle_driver_eyes";
+	CPropVehicleDriveable *pDriveableCheck = dynamic_cast<CPropVehicleDriveable *>( pData->pVehicle );
+	if ( pDriveableCheck && pDriveableCheck->IsPlayerAtGun() )
+		pszEyeAttachment = "vehicle_gunner_eyes";
+	int eyeAttachmentIndex = pData->pVehicle->LookupAttachment( pszEyeAttachment );
 	matrix3x4_t vehicleEyePosToWorld;
 	Vector vehicleEyeOrigin;
 	QAngle vehicleEyeAngles;

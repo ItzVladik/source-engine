@@ -49,6 +49,8 @@ public:
 	bool	Deploy( void );
 	bool	Holster( CBaseCombatWeapon *pSwitchingTo = NULL );
 
+	void	ThrowNow( void );
+
 	int		CapabilitiesGet( void ) { return bits_CAP_WEAPON_RANGE_ATTACK1; }
 	
 	bool	Reload( void );
@@ -476,5 +478,22 @@ void CWeaponFrag::RollGrenade( CBasePlayer *pPlayer )
 
 	m_iPrimaryAttacks++;
 	gamestats->Event_WeaponFired( pPlayer, true, GetClassname() );
+}
+
+void CWeaponFrag::ThrowNow( void )
+{
+	CBasePlayer *pOwner = ToBasePlayer( GetOwner() );
+	if ( !pOwner )
+		return;
+
+	ThrowGrenade( pOwner );
+	DecrementAmmo( pOwner );
+}
+
+void WeaponFrag_ThrowNow( CBaseCombatWeapon *pWeapon )
+{
+	CWeaponFrag *pFrag = dynamic_cast<CWeaponFrag *>( pWeapon );
+	if ( pFrag )
+		pFrag->ThrowNow();
 }
 

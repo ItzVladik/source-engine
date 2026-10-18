@@ -115,6 +115,7 @@ void CHudZoom::ApplySchemeSettings( vgui::IScheme *scheme )
 //-----------------------------------------------------------------------------
 bool CHudZoom::ShouldDraw( void )
 {
+	return false;
 	bool bNeedsDraw = false;
 
 	C_BaseHLPlayer *pPlayer = dynamic_cast<C_BaseHLPlayer *>(C_BasePlayer::GetLocalPlayer());

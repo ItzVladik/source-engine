@@ -28,6 +28,7 @@ public:
 	~CRagdollProp( void );
 
 	virtual void UpdateOnRemove( void );
+	virtual void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 
 	void DrawDebugGeometryOverlays();
 
@@ -106,6 +107,17 @@ public:
 	void			InputFadeAndRemove( inputdata_t &inputdata );
 
 	DECLARE_DATADESC();
+
+	virtual bool	VPhysicsIsFlesh( void ) { return false; }
+
+	bool			m_bUHGibable;
+	int				m_iUHGibType;
+	int				m_iUHPartHealth[5];
+	int				m_iUHHelmetHealth;
+	unsigned int	m_nUHSeveredParts;
+	string_t		m_iszUHGibModel[4];
+	Vector			m_vecUHDraggedLastPos;
+	bool			m_bUHDragged;
 
 protected:
 	void CalcRagdollSize( void );

@@ -46,6 +46,9 @@
 #include "gamestats.h"
 #include "filters.h"
 #include "tier0/icommandline.h"
+#include "ammodef.h"
+#include "underhell/uh_weapons.h"
+#include "underhell/uh_bullettime.h"
 
 #ifdef HL2_EPISODIC
 #include "npc_alyx_episodic.h"
@@ -385,6 +388,90 @@ BEGIN_DATADESC( CHL2_Player )
 
 	//DEFINE_FIELD( m_hPlayerProxy, FIELD_EHANDLE ), //Shut up class check!
 
+	// Underhell inventory / endurance / gear
+	DEFINE_ARRAY( m_iInventory, FIELD_INTEGER, UH_INVENTORY_SLOTS ),
+	DEFINE_FIELD( m_bShoulderFlashlight, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bFlashlightOn, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bInventoryEnabled, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_iUHBatteryCount, FIELD_INTEGER ),
+	DEFINE_FIELD( m_iUHHermitCardsCount, FIELD_INTEGER ),
+	DEFINE_FIELD( m_iUHHermitCurrentQuestCount, FIELD_INTEGER ),
+	DEFINE_FIELD( m_iUHHermitTotalQuestCount, FIELD_INTEGER ),
+	DEFINE_FIELD( m_bDisplayHermitCard, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_iEndurance, FIELD_INTEGER ),
+	DEFINE_FIELD( m_iBleedCounter, FIELD_INTEGER ),
+	DEFINE_FIELD( m_flPseudoEndurance, FIELD_FLOAT ),
+	DEFINE_FIELD( m_flPseudoHealth, FIELD_FLOAT ),
+	DEFINE_FIELD( m_fEStaminaCount, FIELD_FLOAT ),
+	DEFINE_FIELD( m_flLastBleedTime, FIELD_TIME ),
+	DEFINE_FIELD( m_flLastBleedTickBase, FIELD_TIME ),
+	DEFINE_FIELD( m_iEHealthCount, FIELD_INTEGER ),
+	DEFINE_FIELD( m_hActiveGlowStick, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_hActiveGlowStickLight, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_hUHLookGlowTarget, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_flNextUHLookGlowTime, FIELD_TIME ),
+	DEFINE_FIELD( m_hCarryingRagdoll, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_fSavedSensitivity, FIELD_FLOAT ),
+	DEFINE_FIELD( m_vecUHFreeAimTarget, FIELD_VECTOR ),
+	DEFINE_FIELD( m_bBulletTimeDisabled, FIELD_BOOLEAN ),
+	DEFINE_THINKFUNC( UH_EndBulletTimeThink ),
+	DEFINE_THINKFUNC( UH_LeftArmContextThink ),
+	DEFINE_THINKFUNC( UH_FlashlightViewModelThink ),
+	DEFINE_THINKFUNC( UH_FlareHitContextThink ),
+	DEFINE_THINKFUNC( UH_KickThink ),
+	DEFINE_FIELD( m_flUHBatteryCharge, FIELD_FLOAT ),
+	DEFINE_FIELD( m_bIronSighted, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bUHWeaponObstructed, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_fIronsightedTime, FIELD_TIME ),
+	DEFINE_FIELD( m_bHavePistolSilencer, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bHaveRifleSilencer, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bLaserToggleState, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bHaveNightVision, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bHaveGasMask, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bNightVisionOn, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bGasMaskOn, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bNightVisionEnabled, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bGasMaskEnabled, FIELD_BOOLEAN ),
+	DEFINE_SOUNDPATCH( m_pGasMaskBreathLoop ),
+	DEFINE_FIELD( m_bLeftArmDeployed, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bHoldingFlare, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_flFlareStartTime, FIELD_TIME ),
+	DEFINE_FIELD( m_hHeldFlareEffect, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_hHeldFlareSprite, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_bFlareMarker, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bFlareStrikePending, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_flNextFlareStrike, FIELD_TIME ),
+	DEFINE_FIELD( m_bFlashlightHolstered, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bDisableWeaponDrop, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_iszKickViewModel, FIELD_STRING ),
+	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetPistolSilencer", InputSetPistolSilencer ),
+	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetRifleSilencer", InputSetRifleSilencer ),
+	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetNightVision", InputSetNightVision ),
+	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetGasMask", InputSetGasMask ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "DisableDropWeapon", InputDisableDropWeapon ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "EnableDropWeapon", InputEnableDropWeapon ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetPlayerModel", InputSetPlayerModel ),
+	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetPlayerSkin", InputSetPlayerSkin ),
+	DEFINE_INPUTFUNC( FIELD_INTEGER, "ViewModelSkin", InputViewModelSkin ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetPlayerKickModel", InputSetPlayerKickModel ),
+	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "Bleedplayer", InputBleedPlayer ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "DisableInventory", InputDisableInventory ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "EnableInventory", InputEnableInventory ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "DisplayHermitCards", InputDisplayHermitCards ),
+	DEFINE_INPUTFUNC( FIELD_INTEGER, "RemoveEndurance", InputRemoveEndurance ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "RemoveLitGlowstick", InputRemoveLitGlowstick ),
+	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetStatusVisibility", InputSetStatusVisibility ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "Give", InputGive ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "GiveInv", InputGiveInv ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "DisableKick", InputDisableKick ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "EnableKick", InputEnableKick ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "EnableBt", InputEnableBt ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "DisableBt", InputDisableBt ),
+	DEFINE_FIELD( m_bKickMarker, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bKickActive, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bKickDisabled, FIELD_BOOLEAN ),
+	DEFINE_OUTPUT( m_OnDisabledKickAttempted, "OnDisabledKickAttempted" ),
+
 END_DATADESC()
 
 CHL2_Player::CHL2_Player()
@@ -395,6 +482,35 @@ CHL2_Player::CHL2_Player()
 
 	m_flArmorReductionTime = 0.0f;
 	m_iArmorReductionFrom = 0;
+
+	m_bKickMarker = false;
+	m_bKickActive = false;
+	m_bKickDisabled = false;
+	m_bHaveNightVision = false;
+	m_bHaveGasMask = false;
+	m_bNightVisionOn = false;
+	m_bGasMaskOn = false;
+	m_bNightVisionEnabled = true;
+	m_bGasMaskEnabled = true;
+	m_pGasMaskBreathLoop = NULL;
+	m_bLeftArmDeployed = false;
+	m_bHoldingFlare = false;
+	m_flFlareStartTime = 0.0f;
+	m_hHeldFlareEffect = NULL;
+	m_hHeldFlareSprite = NULL;
+	m_bFlareMarker = false;
+	m_bFlareStrikePending = false;
+	m_flNextFlareStrike = 0.0f;
+	m_bFlashlightHolstered = false;
+	m_hCarryingRagdoll = NULL;
+	m_fSavedSensitivity = 0.0f;
+	m_vecUHFreeAimTarget = vec3_origin;
+	m_bUHWeaponObstructed = false;
+	m_hUHLookGlowTarget = NULL;
+	m_flNextUHLookGlowTime = 0.0f;
+	m_bBulletTimeDisabled = true;
+	UH_InitializeInventory();
+	UH_InitializeEndurance();
 }
 
 //
@@ -419,6 +535,29 @@ CSuitPowerDevice SuitDeviceBreather( bits_SUIT_DEVICE_BREATHER, 6.7f );		// 100 
 IMPLEMENT_SERVERCLASS_ST(CHL2_Player, DT_HL2_Player)
 	SendPropDataTable(SENDINFO_DT(m_HL2Local), &REFERENCE_SEND_TABLE(DT_HL2Local), SendProxy_SendLocalDataTable),
 	SendPropBool( SENDINFO(m_fIsSprinting) ),
+
+	SendPropBool( SENDINFO(m_bShoulderFlashlight) ),
+	SendPropBool( SENDINFO(m_bFlashlightOn) ),
+	SendPropBool( SENDINFO(m_bInventoryEnabled) ),
+	SendPropInt( SENDINFO(m_iUHBatteryCount) ),
+	SendPropInt( SENDINFO(m_iUHHermitCardsCount) ),
+	SendPropInt( SENDINFO(m_iUHHermitCurrentQuestCount) ),
+	SendPropInt( SENDINFO(m_iUHHermitTotalQuestCount) ),
+	SendPropBool( SENDINFO(m_bDisplayHermitCard) ),
+	SendPropArray3( SENDINFO_ARRAY3(m_iInventory), SendPropInt( SENDINFO_ARRAY(m_iInventory) ) ),
+	SendPropInt( SENDINFO(m_iEndurance) ),
+	SendPropInt( SENDINFO(m_iBleedCounter) ),
+	SendPropFloat( SENDINFO(m_flUHBatteryCharge), 0, SPROP_NOSCALE ),
+	SendPropBool( SENDINFO(m_bIronSighted) ),
+	SendPropFloat( SENDINFO(m_fIronsightedTime), 0, SPROP_NOSCALE ),
+	SendPropBool( SENDINFO(m_bHavePistolSilencer) ),
+	SendPropBool( SENDINFO(m_bHaveRifleSilencer) ),
+	SendPropBool( SENDINFO(m_bLaserToggleState) ),
+	SendPropBool( SENDINFO(m_bKickMarker) ),
+	SendPropBool( SENDINFO(m_bNightVisionOn) ),
+	SendPropBool( SENDINFO(m_bGasMaskOn) ),
+	SendPropBool( SENDINFO(m_bLeftArmDeployed) ),
+	SendPropBool( SENDINFO(m_bHoldingFlare) ),
 END_SEND_TABLE()
 
 
@@ -435,6 +574,36 @@ void CHL2_Player::Precache( void )
 	PrecacheScriptSound( "HL2Player.TrainUse" );
 	PrecacheScriptSound( "HL2Player.Use" );
 	PrecacheScriptSound( "HL2Player.BurnPain" );
+
+	PrecacheScriptSound( "Player.Eat" );
+	PrecacheScriptSound( "Player.Eat.Apple" );
+	PrecacheScriptSound( "Player.Drink" );
+	PrecacheScriptSound( "HL2Player.Ironsighton" );
+	PrecacheScriptSound( "HL2Player.Ironsightoff" );
+	PrecacheModel( "models/weapons/v_kick_jake_casual.mdl" );
+	PrecacheModel( "models/weapons/v_kick_jake_inmate.mdl" );
+	PrecacheModel( "models/weapons/v_kick_jake_pmc.mdl" );
+	PrecacheModel( "models/weapons/v_kick_jake_guard.mdl" );
+	PrecacheScriptSound( "HL2Player.kick_wall" );
+	PrecacheScriptSound( "HL2Player.kick_body" );
+	PrecacheScriptSound( "HL2Player.kick_fire" );
+	PrecacheScriptSound( "HL2Player.kick_fire_fly" );
+	PrecacheScriptSound( "Player.Voice.Kick" );
+	PrecacheScriptSound( "Player.Voice.Kick.Exhausted" );
+	PrecacheScriptSound( "Player.Voice.Melee" );
+	PrecacheScriptSound( "Player.Voice.Melee.Exhausted" );
+	PrecacheScriptSound( "Player.bullettimestart" );
+	PrecacheScriptSound( "Player.bullettimeloop" );
+	PrecacheScriptSound( "Player.bullettimeend" );
+	PrecacheScriptSound( "Player.nvon" );
+	PrecacheScriptSound( "Player.nvoff" );
+	PrecacheScriptSound( "Player.GasMaskOn" );
+	PrecacheScriptSound( "Player.GasMaskOff" );
+	PrecacheScriptSound( "GasMask.Breath.Normal" );
+	PrecacheModel( "models/weapons/v_grenade.mdl" );
+	PrecacheModel( "models/weapons/v_flashlight_pg.mdl" );
+	PrecacheModel( "models/weapons/v_flare_pg.mdl" );
+	PrecacheModel( "models/PG_props/pg_obj/pg_flare.mdl" );
 }
 
 //-----------------------------------------------------------------------------
@@ -734,6 +903,9 @@ void CHL2_Player::PreThink(void)
 	CheckFlashlight();
 #endif	// HL2_EPISODIC
 
+	UH_UpdateLookGlow();
+	UH_UpdateFlashlightBattery();
+
 	// So the correct flags get sent to client asap.
 	//
 	if ( m_afPhysicsFlags & PFLAG_DIROVERRIDE )
@@ -902,6 +1074,9 @@ void CHL2_Player::PostThink( void )
 	{
 		 HandleAdmireGlovesAnimation();
 	}
+
+	UH_UpdateBleeding();
+	UH_UpdateWeaponObstruction();
 }
 
 void CHL2_Player::StartAdmireGlovesAnimation( void )
@@ -1142,6 +1317,13 @@ void CHL2_Player::Spawn(void)
 	GetPlayerProxy();
 
 	SetFlashlightPowerDrainScale( 1.0f );
+
+	CreateViewModel( 1 );
+	CreateViewModel( 2 );
+	UH_SetKickViewModel( "models/weapons/v_kick_jake_casual.mdl" );
+	UH_StopGasMaskBreath();
+	m_bNightVisionOn = false;
+	m_bGasMaskOn = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -1746,6 +1928,19 @@ void CHL2_Player::CheatImpulseCommands( int iImpulse )
 		break;
 	}
 
+	case 110:
+	{
+		if ( !m_bBulletTimeDisabled )
+			UH_ToggleBulletTime( this );
+		break;
+	}
+
+	case 101:
+	{
+		UH_GiveAllWeapons( this );
+		break;
+	}
+
 	default:
 		BaseClass::CheatImpulseCommands( iImpulse );
 	}
@@ -1786,7 +1981,7 @@ void CHL2_Player::SuitPower_Update( void )
 {
 	if( SuitPower_ShouldRecharge() )
 	{
-		SuitPower_Charge( SUITPOWER_CHARGE_RATE * gpGlobals->frametime );
+		UH_UpdateEndurance();
 	}
 	else if( m_HL2Local.m_bitsActiveDevices )
 	{
@@ -2038,6 +2233,19 @@ void CHL2_Player::FlashlightTurnOn( void )
 		return;
 #endif
 
+	m_bFlashlightOn = true;
+	UH_UpdateLeftArm();
+#ifdef HL2_EPISODIC
+	if ( m_iUHBatteryCount > 0 && m_HL2Local.m_flFlashBattery <= 0.0f )
+	{
+		m_HL2Local.m_flFlashBattery = 100.0f;
+		m_flUHBatteryCharge = 100.0f;
+	}
+#else
+	if ( m_iUHBatteryCount > 0 && m_flUHBatteryCharge <= 0.0f )
+		m_flUHBatteryCharge = 100.0f;
+#endif
+
 	AddEffects( EF_DIMLIGHT );
 	EmitSound( "HL2Player.FlashLightOn" );
 
@@ -2056,6 +2264,9 @@ void CHL2_Player::FlashlightTurnOff( void )
 		if( !SuitPower_RemoveDevice( SuitDeviceFlashlight ) )
 			return;
 	}
+
+	m_bFlashlightOn = false;
+	UH_UpdateLeftArm();
 
 	RemoveEffects( EF_DIMLIGHT );
 	EmitSound( "HL2Player.FlashLightOff" );
@@ -2389,6 +2600,11 @@ int CHL2_Player::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 		}
 	}
 
+
+	if ( info.GetDamage() > 0.0f && info.GetAttacker() != this )
+	{
+		UH_StartBleeding( info.GetDamage() );
+	}
 
 	// Call the base class implementation
 	return BaseClass::OnTakeDamage_Alive( info );
@@ -2764,6 +2980,11 @@ bool CHL2_Player::ClientCommand( const CCommand &args )
 	}
 
 #endif
+
+	if ( UH_HandleInventoryCommand( args ) )
+		return true;
+	if ( UH_HandleObjectiveCommand( args ) )
+		return true;
 
 	if ( !Q_stricmp( args[0], "emit" ) )
 	{

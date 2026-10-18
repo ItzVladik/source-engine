@@ -104,7 +104,7 @@ BEGIN_DATADESC( CItem )
 #endif
 
 	// Outputs
-	DEFINE_OUTPUT( m_OnPlayerTouch, "OnPlayerTouch" ),
+	DEFINE_OUTPUT( m_OnPlayerTouch, "OnPlayerPickup" ),
 	DEFINE_OUTPUT( m_OnCacheInteraction, "OnCacheInteraction" ),
 
 END_DATADESC()

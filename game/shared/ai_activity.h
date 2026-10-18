@@ -26,6 +26,7 @@ typedef enum
 	ACT_WALK_AIM,
 	ACT_WALK_CROUCH,
 	ACT_WALK_CROUCH_AIM,
+	ACT_WALK_UNARMED,
 	ACT_RUN,
 	ACT_RUN_AIM,
 	ACT_RUN_CROUCH,
@@ -250,6 +251,10 @@ typedef enum
 	ACT_VM_IDLE_TO_LOWERED,
 	ACT_VM_IDLE_LOWERED,
 	ACT_VM_LOWERED_TO_IDLE,
+	// Underhell near-wall weapon pose
+	ACT_VM_IDLE_TO_RAISED,
+	ACT_VM_IDLE_RAISED,
+	ACT_VM_RAISED_TO_IDLE,
 	ACT_VM_RECOIL1,
 	ACT_VM_RECOIL2,
 	ACT_VM_RECOIL3,
@@ -635,6 +640,9 @@ typedef enum
 //===========================
 
 	ACT_VM_PRIMARYATTACK_SILENCED,		// fire
+	ACT_VM_RECOIL1_SILENCED,
+	ACT_VM_RECOIL2_SILENCED,
+	ACT_VM_RECOIL3_SILENCED,
 	ACT_VM_RELOAD_SILENCED,
 	ACT_VM_DRYFIRE_SILENCED,				// fire with no ammo loaded.
 	ACT_VM_IDLE_SILENCED,
@@ -2106,6 +2114,9 @@ typedef enum
 	ACT_SPELL_VM_IDLE, 
 	ACT_SPELL_VM_ARM, 
 	ACT_SPELL_VM_FIRE,
+
+	ACT_KICK,
+	ACT_KICK_CROUCHED,
 
 	// this is the end of the global activities, private per-monster activities start here.
 	LAST_SHARED_ACTIVITY,

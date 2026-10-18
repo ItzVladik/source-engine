@@ -36,6 +36,10 @@
 #include "toolframework/itoolentity.h"
 #include "tier0/threadtools.h"
 
+extern bool g_bRenderingReflectiveGlass;
+extern ConVar cl_player_render_mirror;
+extern ConVar cl_uh_render_debug;
+
 class C_Team;
 class IPhysicsObject;
 class IClientVehicle;
@@ -1620,6 +1624,15 @@ private:
 	CNetworkVar( bool, m_bSimulatedEveryTick );
 	CNetworkVar( bool, m_bAnimatedEveryTick );
 	CNetworkVar( bool, m_bAlternateSorting );
+	CNetworkVar( bool, m_bIsMirrorOnly );
+	bool	m_bGlow;
+	color32	m_GlowColor;
+
+public:
+	bool	IsMirrorOnly( void ) const { return m_bIsMirrorOnly; }
+	bool	IsGlowEnabled( void ) const { return m_bGlow; }
+	const color32 &GetGlowColor( void ) const { return m_GlowColor; }
+private:
 
 	//Adrian
 	unsigned char					m_iTextureFrameIndex;

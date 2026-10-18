@@ -28,6 +28,7 @@
 #include "tier1/convar_serverbounded.h"
 #include "cam_thirdperson.h"
 #include "inputsystem/iinputsystem.h"
+#include "underhell/uh_freeaim.h"
 
 #if defined( _X360 )
 #include "xbox/xbox_win32stubs.h"
@@ -450,8 +451,63 @@ void CInput::ScaleMouse( float *x, float *y )
 //			mouse_x - 
 //			mouse_y - 
 //-----------------------------------------------------------------------------
+static ConVar cam_ots_freeaim_enable( "cam_ots_freeaim_enable", "1", FCVAR_ARCHIVE, "Enable Underhell viewmodel free aim." );
+static ConVar cam_ots_freeaim_move_max( "cam_ots_freeaim_move_max", "0.1", FCVAR_ARCHIVE );
+static Vector2D g_vecUHFreeAimCursor;
+
+void UH_FreeAimUpdateCursor( float mouseX, float mouseY, CUserCmd *pCmd )
+{
+	if ( !cam_ots_freeaim_enable.GetBool() )
+	{
+		g_vecUHFreeAimCursor.Init();
+		return;
+	}
+
+	g_vecUHFreeAimCursor.x += m_yaw.GetFloat() * ( 1.0f / 90.0f ) * mouseX;
+	g_vecUHFreeAimCursor.y += m_pitch->GetFloat() * ( 1.0f / 90.0f ) * mouseY;
+
+	float flLength = g_vecUHFreeAimCursor.Length();
+	if ( flLength > 0.0f )
+	{
+		g_vecUHFreeAimCursor /= flLength;
+		g_vecUHFreeAimCursor *= min( flLength, cam_ots_freeaim_move_max.GetFloat() );
+	}
+
+	if ( pCmd )
+	{
+		pCmd->mousedx = (short)mouseX;
+		pCmd->mousedy = (short)mouseY;
+	}
+}
+
+bool UH_FreeAimGetCursor( Vector2D &cursor )
+{
+	if ( !cam_ots_freeaim_enable.GetBool() )
+		return false;
+	cursor = g_vecUHFreeAimCursor;
+	return true;
+}
+
+void UH_FreeAimClampDirection( const QAngle &viewAngles, Vector &direction )
+{
+	Vector horizontalForward;
+	AngleVectors( viewAngles, &horizontalForward );
+	horizontalForward.z = 0.0f;
+	if ( VectorNormalize( horizontalForward ) == 0.0f )
+		return;
+	if ( DotProduct( horizontalForward, direction ) < 0.1f )
+	{
+		Vector cross, tangent;
+		CrossProduct( horizontalForward, direction, cross );
+		CrossProduct( cross, horizontalForward, tangent );
+		direction = tangent + horizontalForward * 0.1f;
+		VectorNormalize( direction );
+	}
+}
+
 void CInput::ApplyMouse( QAngle& viewangles, CUserCmd *cmd, float mouse_x, float mouse_y )
 {
+	UH_FreeAimUpdateCursor( mouse_x, mouse_y, cmd );
 	if ( !((in_strafe.state & 1) || lookstrafe.GetInt()) )
 	{
 #ifdef PORTAL

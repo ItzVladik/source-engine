@@ -1866,6 +1866,42 @@ public:
 
 	bool				m_fNoDamageDecal;
 
+	string_t			m_uh_bodygroup;
+	float				m_flUhFOV;
+	float				m_flUhViewDistance;
+	bool				m_bUhSquadTemp;
+	bool				m_bUhSpotBodies;
+	COutputEvent		m_OnSpotSoldierBody;
+	COutputEvent		m_OnSpotInfectedBody;
+	COutputEvent		m_OnSpotDefaultBody;
+	bool				m_bUHGibable;
+	int					m_iUHGibType;
+	int					m_iUHPartHealth[5];
+	int					m_iUHHelmetHealth;
+	unsigned int		m_nUHSeveredParts;
+	string_t			m_iszUHGibModel[4];
+	float				m_flNextSpotBodiesTime;
+	float				m_flNextTempSquadTime;
+	void				UH_ApplySpawnSettings( void );
+	void				UH_PrecacheGibModels( void );
+	bool				UH_GibBodyPart( int iHitGroup, const Vector &vecPosition, const Vector &vecDir );
+	bool				UH_ConsiderGib( int iHitGroup, float flDamage, const Vector &vecPosition, const Vector &vecDir );
+	void				UH_ShootOffHelmet( const Vector &vecPosition, const Vector &vecDir );
+	void				UH_SpotBodiesThink( void );
+	void				UH_TempSquadUpdate( void );
+	void				InputSetSquadTemp( inputdata_t &inputdata );
+	void				InputSetFos( inputdata_t &inputdata );
+	void				InputSetViewDistance( inputdata_t &inputdata );
+	void				InputSetSpotBodiesOn( inputdata_t &inputdata );
+	void				InputSetSpotBodiesOff( inputdata_t &inputdata );
+	void				InputRushEntity( inputdata_t &inputdata );
+	void				InputWalkToEntity( inputdata_t &inputdata );
+	void				InputGibHead( inputdata_t &inputdata );
+	void				InputGibLeftArm( inputdata_t &inputdata );
+	void				InputGibRightArm( inputdata_t &inputdata );
+	void				InputGibLeftLeg( inputdata_t &inputdata );
+	void				InputGibRightLeg( inputdata_t &inputdata );
+
 	EHANDLE				m_hStoredPathTarget;		// For TASK_SET_GOAL
 	Vector				m_vecStoredPathGoal;		//
 	GoalType_t			m_nStoredPathType;			// 

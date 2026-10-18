@@ -14,6 +14,7 @@
 #include "datacache/imdlcache.h"
 #include "bone_setup.h"
 #include "physics_prop_ragdoll.h"
+#include "hl2/hl2_player.h"
 #include "KeyValues.h"
 #include "props.h"
 #include "RagdollBoogie.h"
@@ -92,6 +93,15 @@ BEGIN_DATADESC(CRagdollProp)
 
 	DEFINE_FIELD( m_hUnragdoll, FIELD_EHANDLE ),
 	DEFINE_FIELD( m_bFirstCollisionAfterLaunch, FIELD_BOOLEAN ),
+
+	DEFINE_FIELD( m_bUHGibable, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_iUHGibType, FIELD_INTEGER ),
+	DEFINE_ARRAY( m_iUHPartHealth, FIELD_INTEGER, 5 ),
+	DEFINE_FIELD( m_iUHHelmetHealth, FIELD_INTEGER ),
+	DEFINE_FIELD( m_nUHSeveredParts, FIELD_INTEGER ),
+	DEFINE_ARRAY( m_iszUHGibModel, FIELD_STRING, 4 ),
+	DEFINE_FIELD( m_vecUHDraggedLastPos, FIELD_POSITION_VECTOR ),
+	DEFINE_FIELD( m_bUHDragged, FIELD_BOOLEAN ),
 
 	DEFINE_FIELD( m_flBlendWeight, FIELD_FLOAT ),
 	DEFINE_FIELD( m_nOverlaySequence, FIELD_INTEGER ),
@@ -201,6 +211,22 @@ void CRagdollProp::Spawn( void )
 	}
 }
 
+void CRagdollProp::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	if ( useType == USE_OFF )
+		return;
+
+	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
+	if ( !pPlayer || pPlayer->GetGroundEntity() == this )
+		return;
+
+	pPlayer->PickupObject( this, false );
+
+	CHL2_Player *pHL2Player = dynamic_cast< CHL2_Player * >( pPlayer );
+	if ( pHL2Player )
+		pHL2Player->UH_BeginCarryRagdoll( this );
+}
+
 void CRagdollProp::SetSourceClassName( const char *pClassname )
 {
 	m_strSourceClassName = MAKE_STRING( pClassname );
@@ -275,6 +301,16 @@ CRagdollProp::CRagdollProp( void )
 	m_allAsleep = false;
 	m_flFadeScale = 1;
 	m_flDefaultFadeScale = 1;
+	m_bUHGibable = false;
+	m_iUHGibType = 0;
+	for ( int i = 0; i < 5; i++ )
+		m_iUHPartHealth[i] = 0;
+	m_iUHHelmetHealth = 0;
+	m_nUHSeveredParts = 0;
+	for ( int i = 0; i < 4; i++ )
+		m_iszUHGibModel[i] = NULL_STRING;
+	m_vecUHDraggedLastPos.Init();
+	m_bUHDragged = false;
 }
 
 CRagdollProp::~CRagdollProp( void )
@@ -289,7 +325,7 @@ void CRagdollProp::Precache( void )
 
 int CRagdollProp::ObjectCaps()
 {
-	return BaseClass::ObjectCaps() | FCAP_WCEDIT_POSITION;
+	return BaseClass::ObjectCaps() | FCAP_WCEDIT_POSITION | FCAP_IMPULSE_USE;
 }
 
 //-----------------------------------------------------------------------------
@@ -820,6 +856,8 @@ void CRagdollProp::TraceAttack( const CTakeDamageInfo &info, const Vector &dir, 
 		VPhysicsSwapObject( m_ragdoll.list[ptr->physicsbone].pObject );
 	}
 	BaseClass::TraceAttack( info, dir, ptr, pAccumulator );
+	extern void UH_RagdollDismember( CRagdollProp *pRagdoll, int iHitGroup, float flDamage, int iPhysicsBone, const Vector &pos, const Vector &dir );
+	UH_RagdollDismember( this, ptr->hitgroup, info.GetDamage(), ptr->physicsbone, ptr->endpos, dir );
 }
 
 void CRagdollProp::SetupBones( matrix3x4_t *pBoneToWorld, int boneMask )
@@ -1317,6 +1355,8 @@ CBaseEntity *CreateServerRagdoll( CBaseAnimating *pAnimating, int forceBone, con
 	// colliding with server ragdolls they kill
 	pRagdoll->SetKiller( info.GetInflictor() );
 	pRagdoll->SetSourceClassName( pAnimating->GetClassname() );
+	extern void UH_TransferDismembermentState( CBaseAnimating *, CRagdollProp * );
+	UH_TransferDismembermentState( pAnimating, pRagdoll );
 
 	// NPC_STATE_DEAD npc's will have their COND_IN_PVS cleared, so this needs to force SetupBones to happen
 	unsigned short fPrevFlags = pAnimating->GetBoneCacheFlags();

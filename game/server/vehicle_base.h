@@ -192,6 +192,7 @@ public:
 	void	InputUnlock( inputdata_t &inputdata );
 	void	InputTurnOn( inputdata_t &inputdata );
 	void	InputTurnOff( inputdata_t &inputdata );
+	void	InputToggleGunMode( inputdata_t &inputdata );
 
 	// Locals
 	void	ResetUseKey( CBasePlayer *pPlayer );
@@ -234,7 +235,7 @@ public:
 
 protected:
 
-	virtual bool	ShouldThink() { return ( GetDriver() != NULL ); }
+	virtual bool	ShouldThink() { return ( m_hPlayer != NULL || m_hNPCDriver != NULL ); }
 
 	inline bool HasGun();
 	void DestroyServerVehicle();
@@ -264,6 +265,8 @@ public:
 	CNetworkVector( m_vecGunCrosshair );
 	CNetworkVar( bool, m_bUnableToFire );
 	CNetworkVar( bool, m_bHasGun );
+	CNetworkVar( bool, m_bPlayerAtGun );
+	bool IsPlayerAtGun( void ) const { return m_bPlayerAtGun; }
 
 	CNetworkVar( bool, m_nScannerDisabledWeapons );
 	CNetworkVar( bool, m_nScannerDisabledVehicle );

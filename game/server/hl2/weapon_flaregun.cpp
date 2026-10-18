@@ -55,7 +55,9 @@ BEGIN_DATADESC( CFlare )
 	DEFINE_FIELD( m_bFading,		FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bLight,			FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bSmoke,			FIELD_BOOLEAN ),
-	DEFINE_FIELD( m_bPropFlare,		FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bPropFlare,			FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bGlowStick,			FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_nSkinNumber,			FIELD_INTEGER ),
 	DEFINE_FIELD( m_bInActiveList,	FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_pNextFlare,		FIELD_CLASSPTR ),
 	
@@ -78,6 +80,8 @@ IMPLEMENT_SERVERCLASS_ST( CFlare, DT_Flare )
 	SendPropInt( SENDINFO( m_bLight ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_bSmoke ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_bPropFlare ), 1, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO( m_bGlowStick ), 1, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO( m_nSkinNumber ) ),
 END_SEND_TABLE()
 
 CFlare *CFlare::activeFlares = NULL;
@@ -134,6 +138,8 @@ CFlare::CFlare( void )
 	m_lifeState		= LIFE_ALIVE;
 	m_iHealth		= 100;
 	m_bPropFlare	= false;
+	m_bGlowStick	= false;
+	m_nSkinNumber	= 0;
 	m_bInActiveList	= false;
 	m_pNextFlare	= NULL;
 }
@@ -362,6 +368,7 @@ void CFlare::FlareThink( void )
 //-----------------------------------------------------------------------------
 void CFlare::FlareBurnTouch( CBaseEntity *pOther )
 {
+	if ( m_bGlowStick ) return;
 	if ( pOther && pOther->m_takedamage && ( m_flNextDamage < gpGlobals->curtime ) )
 	{
 		pOther->TakeDamage( CTakeDamageInfo( this, m_pOwner, 1, (DMG_BULLET|DMG_BURN) ) );
@@ -375,6 +382,7 @@ void CFlare::FlareBurnTouch( CBaseEntity *pOther )
 //-----------------------------------------------------------------------------
 void CFlare::FlareTouch( CBaseEntity *pOther )
 {
+	if ( m_bGlowStick ) return;
 	Assert( pOther );
 	if ( !pOther->IsSolid() )
 		return;

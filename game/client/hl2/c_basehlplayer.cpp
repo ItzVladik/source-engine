@@ -31,6 +31,28 @@ ConVar cl_npc_speedmod_outtime( "cl_npc_speedmod_outtime", "1.5", FCVAR_CLIENTDL
 IMPLEMENT_CLIENTCLASS_DT(C_BaseHLPlayer, DT_HL2_Player, CHL2_Player)
 	RecvPropDataTable( RECVINFO_DT(m_HL2Local),0, &REFERENCE_RECV_TABLE(DT_HL2Local) ),
 	RecvPropBool( RECVINFO( m_fIsSprinting ) ),
+	RecvPropBool( RECVINFO( m_bShoulderFlashlight ) ),
+	RecvPropBool( RECVINFO( m_bFlashlightOn ) ),
+	RecvPropBool( RECVINFO( m_bInventoryEnabled ) ),
+	RecvPropInt( RECVINFO( m_iUHBatteryCount ) ),
+	RecvPropInt( RECVINFO( m_iUHHermitCardsCount ) ),
+	RecvPropInt( RECVINFO( m_iUHHermitCurrentQuestCount ) ),
+	RecvPropInt( RECVINFO( m_iUHHermitTotalQuestCount ) ),
+	RecvPropBool( RECVINFO( m_bDisplayHermitCard ) ),
+	RecvPropArray3( RECVINFO_ARRAY(m_iInventory), RecvPropInt( RECVINFO(m_iInventory[0]) ) ),
+	RecvPropInt( RECVINFO( m_iEndurance ) ),
+	RecvPropInt( RECVINFO( m_iBleedCounter ) ),
+	RecvPropFloat( RECVINFO( m_flUHBatteryCharge ) ),
+	RecvPropBool( RECVINFO( m_bIronSighted ) ),
+	RecvPropFloat( RECVINFO( m_fIronsightedTime ) ),
+	RecvPropBool( RECVINFO( m_bHavePistolSilencer ) ),
+	RecvPropBool( RECVINFO( m_bHaveRifleSilencer ) ),
+	RecvPropBool( RECVINFO( m_bLaserToggleState ) ),
+	RecvPropBool( RECVINFO( m_bKickMarker ) ),
+	RecvPropBool( RECVINFO( m_bNightVisionOn ) ),
+	RecvPropBool( RECVINFO( m_bGasMaskOn ) ),
+	RecvPropBool( RECVINFO( m_bLeftArmDeployed ) ),
+	RecvPropBool( RECVINFO( m_bHoldingFlare ) ),
 END_RECV_TABLE()
 
 BEGIN_PREDICTION_DATA( C_BaseHLPlayer )
