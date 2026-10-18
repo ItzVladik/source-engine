@@ -276,6 +276,9 @@ public:
 	bool	OverridePropdata( void );
 	void	HandleAnimEvent( animevent_t *pEvent );
 
+	virtual void	Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	virtual int		ObjectCaps( void );
+
 	// baseentity - watch dynamic hierarchy updates
 	virtual void	SetParent( CBaseEntity* pNewParent, int iAttachment = -1 );
 	bool			TestCollision( const Ray_t &ray, unsigned int mask, trace_t& trace );
@@ -297,6 +300,7 @@ public:
 
 	COutputEvent		m_pOutputAnimBegun;
 	COutputEvent		m_pOutputAnimOver;
+	COutputEvent		m_OnPlayerUse;
 
 	string_t			m_iszDefaultAnim;
 

@@ -48,6 +48,8 @@ static ConVar r_flashlightvisualizetrace( "r_flashlightvisualizetrace", "0", FCV
 static ConVar r_flashlightambient( "r_flashlightambient", "0.0", FCVAR_CHEAT );
 static ConVar r_flashlightshadowatten( "r_flashlightshadowatten", "0.35", FCVAR_CHEAT );
 static ConVar r_flashlightladderdist( "r_flashlightladderdist", "40.0", FCVAR_CHEAT );
+static ConVar r_flashlightforceflicker( "r_flashlightforceflicker", "0", 0, "Force flashlight flicker", true, 0.0f, true, 1.0f );
+static ConVar r_flashlightflickermode( "r_flashlightflickermode", "0", 0, "Flicker when the flashlight battery is low or empty" );
 static ConVar mat_slopescaledepthbias_shadowmap( "mat_slopescaledepthbias_shadowmap", "16", FCVAR_CHEAT );
 static ConVar mat_depthbias_shadowmap(	"mat_depthbias_shadowmap", "0.0005", FCVAR_CHEAT  );
 
@@ -270,6 +272,8 @@ void CFlashlightEffect::UpdateLightNew(const Vector &vecPos, const Vector &vecFo
 	if ( pPlayer )
 	{
 		float flBatteryPower = ( pPlayer->m_HL2Local.m_flFlashBattery >= 0.0f ) ? ( pPlayer->m_HL2Local.m_flFlashBattery ) : pPlayer->m_HL2Local.m_flSuitPower;
+		if ( r_flashlightforceflicker.GetBool() || r_flashlightflickermode.GetBool() )
+			flBatteryPower = 0.0f;
 		if ( flBatteryPower <= 10.0f )
 		{
 			float flScale;

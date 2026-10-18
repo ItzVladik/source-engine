@@ -44,6 +44,7 @@ enum
 	SOUND_READINESS_LOW		= 0x00004000, // Changes listener's readiness (Player Companion only)
 	SOUND_READINESS_MEDIUM	= 0x00008000,
 	SOUND_READINESS_HIGH	= 0x00010000,
+	SOUND_FMRADIO			= 0x00020000,
 
 	// Contexts begin here.
 	SOUND_CONTEXT_FROM_SNIPER		= 0x00100000, // additional context for SOUND_DANGER

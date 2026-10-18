@@ -432,6 +432,44 @@ void ClientModeShared::OverrideView( CViewSetup *pSetup )
 
 	pPlayer->OverrideView( pSetup );
 
+	if ( ::input->CAM_IsThirdPerson() && pPlayer->AllowOvertheShoulderView() )
+	{
+		static ConVar cam_ots_offset( "cam_ots_offset", "15 -40 0", FCVAR_ARCHIVE );
+		static ConVar cam_ots_originlag( "cam_ots_origin_lag", "38.0", FCVAR_ARCHIVE );
+		static Vector s_vecLaggedEye = vec3_origin;
+		QAngle viewAngles;
+		engine->GetViewAngles( viewAngles );
+		float offsetRight = 15.0f, offsetForward = -40.0f, offsetUp = 0.0f;
+		CCommand offsetCommand;
+		offsetCommand.Tokenize( cam_ots_offset.GetString() );
+		if ( offsetCommand.ArgC() >= 3 )
+		{
+			offsetRight = atof( offsetCommand[0] );
+			offsetForward = atof( offsetCommand[1] );
+			offsetUp = atof( offsetCommand[2] );
+		}
+		const Vector eye = pPlayer->EyePosition();
+		if ( s_vecLaggedEye == vec3_origin || eye.DistTo( s_vecLaggedEye ) > 128.0f )
+			s_vecLaggedEye = eye;
+		else
+		{
+			Vector delta = eye - s_vecLaggedEye;
+			float distance = VectorNormalize( delta );
+			float speedVariety = distance / 128.0f;
+			s_vecLaggedEye += delta * min( distance, gpGlobals->frametime *
+				( cam_ots_originlag.GetFloat() + cam_ots_originlag.GetFloat() * cam_ots_originlag.GetFloat() * speedVariety ) );
+		}
+		Vector forward, right, up;
+		AngleVectors( viewAngles, &forward, &right, &up );
+		const Vector hull( 10, 10, 10 );
+		trace_t tr;
+		Vector desired = s_vecLaggedEye + right * offsetRight + forward * offsetForward + up * offsetUp;
+		UTIL_TraceHull( s_vecLaggedEye, desired, -hull, hull, MASK_SOLID, pPlayer, COLLISION_GROUP_DEBRIS, &tr );
+		pSetup->origin = tr.endpos;
+		pSetup->angles = viewAngles;
+		return;
+	}
+
 	if( ::input->CAM_IsThirdPerson() )
 	{
 		Vector cam_ofs = g_ThirdPersonManager.GetCameraOffsetAngles();

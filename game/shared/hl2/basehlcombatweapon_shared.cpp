@@ -18,9 +18,9 @@ IMPLEMENT_NETWORKCLASS_ALIASED( BaseHLCombatWeapon , DT_BaseHLCombatWeapon )
 
 BEGIN_NETWORK_TABLE( CBaseHLCombatWeapon , DT_BaseHLCombatWeapon )
 #if !defined( CLIENT_DLL )
-//	SendPropInt( SENDINFO( m_bReflectViewModelAnimations ), 1, SPROP_UNSIGNED ),
+	SendPropBool( SENDINFO( m_bSilenced ) ),
 #else
-//	RecvPropInt( RECVINFO( m_bReflectViewModelAnimations ) ),
+	RecvPropBool( RECVINFO( m_bSilenced ) ),
 #endif
 END_NETWORK_TABLE()
 
@@ -80,6 +80,20 @@ bool CBaseHLCombatWeapon::CanLower()
 	if ( SelectWeightedSequence( ACT_VM_IDLE_LOWERED ) == ACTIVITY_NOT_AVAILABLE )
 		return false;
 	return true;
+}
+
+Activity CBaseHLCombatWeapon::GetPrimaryAttackActivity( void )
+{
+	if ( m_bSilenced )
+		return ACT_VM_PRIMARYATTACK_SILENCED;
+	return BaseClass::GetPrimaryAttackActivity();
+}
+
+Activity CBaseHLCombatWeapon::GetDrawActivity( void )
+{
+	if ( m_bSilenced )
+		return ACT_VM_DRAW_SILENCED;
+	return BaseClass::GetDrawActivity();
 }
 
 //-----------------------------------------------------------------------------

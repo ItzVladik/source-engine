@@ -80,6 +80,19 @@ ITexture *GetCameraTexture( void )
 	return s_pCameraTexture;
 }
 
+extern ITexture *GetAllocatedCustomCameraTexture( int index );
+extern ITexture *GetAllocatedScopeTexture();
+
+ITexture *GetCustomCameraTexture( int index )
+{
+	return GetAllocatedCustomCameraTexture( index );
+}
+
+ITexture *GetScopeTexture( void )
+{
+	return GetAllocatedScopeTexture();
+}
+
 //=============================================================================
 // Full Frame Depth Texture
 //=============================================================================

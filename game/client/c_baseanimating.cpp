@@ -3062,6 +3062,12 @@ int C_BaseAnimating::DrawModel( int flags )
 	VPROF_BUDGET( "C_BaseAnimating::DrawModel", VPROF_BUDGETGROUP_MODEL_RENDERING );
 	if ( !m_bReadyToDraw )
 		return 0;
+	if ( IsMirrorOnly() && ( !cl_player_render_mirror.GetBool() || !g_bRenderingReflectiveGlass ) )
+	{
+		C_BasePlayer *pLocal = C_BasePlayer::GetLocalPlayer();
+		if ( this != pLocal || !pLocal->AllowOvertheShoulderView() )
+			return 0;
+	}
 
 	int drawn = 0;
 

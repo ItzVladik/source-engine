@@ -50,6 +50,8 @@ CPointCamera::CPointCamera()
 	m_bIsOn = false;
 	
 	m_bFogEnable = false;
+	m_iRenderTargetindex = 0;
+	m_bCustomTexture = false;
 
 	g_PointCameraList.Insert( this );
 }
@@ -60,6 +62,8 @@ CPointCamera::CPointCamera()
 void CPointCamera::Spawn( void )
 {
 	BaseClass::Spawn();
+	m_iRenderTargetindex = clamp( m_iRenderTargetindex.Get(), 0, 4 );
+	m_bCustomTexture = ( m_iRenderTargetindex > 0 );
 
 	if ( m_spawnflags & SF_CAMERA_START_OFF )
 	{
@@ -222,6 +226,8 @@ BEGIN_DATADESC( CPointCamera )
 	DEFINE_KEYFIELD( m_flFogEnd,	FIELD_FLOAT, "fogEnd" ),
 	DEFINE_KEYFIELD( m_flFogMaxDensity,	FIELD_FLOAT, "fogMaxDensity" ),
 	DEFINE_KEYFIELD( m_bUseScreenAspectRatio, FIELD_BOOLEAN, "UseScreenAspectRatio" ),
+	DEFINE_KEYFIELD( m_iRenderTargetindex, FIELD_INTEGER, "RenderTarget" ),
+	DEFINE_FIELD( m_bCustomTexture, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bActive,		FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bIsOn,			FIELD_BOOLEAN ),
 
@@ -250,4 +256,6 @@ IMPLEMENT_SERVERCLASS_ST( CPointCamera, DT_PointCamera )
 	SendPropFloat( SENDINFO( m_flFogMaxDensity ), 0, SPROP_NOSCALE ),	
 	SendPropInt( SENDINFO( m_bActive ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_bUseScreenAspectRatio ), 1, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO( m_iRenderTargetindex ), 4, SPROP_UNSIGNED ),
+	SendPropInt( SENDINFO( m_bCustomTexture ), 1, SPROP_UNSIGNED ),
 END_SEND_TABLE()

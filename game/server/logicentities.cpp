@@ -866,6 +866,9 @@ public:
 	void InputSetCounter( inputdata_t &inputdata );
 	void InputAddToCounter( inputdata_t &inputdata );
 	void InputGetCounter( inputdata_t &inputdata );
+	void InputSetGlobalOn( inputdata_t &inputdata );
+	void InputSetGlobalOff( inputdata_t &inputdata );
+	void InputSetGlobalDead( inputdata_t &inputdata );
 
 	int DrawDebugTextOverlays(void);
 
@@ -896,6 +899,9 @@ BEGIN_DATADESC( CEnvGlobal )
 	DEFINE_INPUTFUNC( FIELD_INTEGER, "SetCounter",	InputSetCounter ),
 	DEFINE_INPUTFUNC( FIELD_INTEGER, "AddToCounter",	InputAddToCounter ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "GetCounter",	InputGetCounter ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetGlobalOn", InputSetGlobalOn ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetGlobalOff", InputSetGlobalOff ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetGlobalDead", InputSetGlobalDead ),
 	
 	DEFINE_OUTPUT( m_outCounter, "Counter" ),
 
@@ -984,6 +990,37 @@ void CEnvGlobal::InputRemove( inputdata_t &inputdata )
 	{
 		GlobalEntity_Add( m_globalstate, gpGlobals->mapname, GLOBAL_DEAD );
 	}
+}
+
+static void UH_EnvGlobal_SetFromParam( inputdata_t &inputdata, GLOBALESTATE state )
+{
+	const char *pszGlobal = inputdata.value.String();
+	if ( !pszGlobal || !*pszGlobal )
+		return;
+
+	if ( GlobalEntity_IsInTable( pszGlobal ) )
+	{
+		GlobalEntity_SetState( GlobalEntity_GetIndex( pszGlobal ), state );
+	}
+	else
+	{
+		GlobalEntity_Add( pszGlobal, STRING(gpGlobals->mapname), state );
+	}
+}
+
+void CEnvGlobal::InputSetGlobalOn( inputdata_t &inputdata )
+{
+	UH_EnvGlobal_SetFromParam( inputdata, GLOBAL_ON );
+}
+
+void CEnvGlobal::InputSetGlobalOff( inputdata_t &inputdata )
+{
+	UH_EnvGlobal_SetFromParam( inputdata, GLOBAL_OFF );
+}
+
+void CEnvGlobal::InputSetGlobalDead( inputdata_t &inputdata )
+{
+	UH_EnvGlobal_SetFromParam( inputdata, GLOBAL_DEAD );
 }
 
 

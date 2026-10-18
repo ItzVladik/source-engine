@@ -301,6 +301,9 @@ IMPLEMENT_SERVERCLASS_ST_NOBASE( CBaseEntity, DT_BaseEntity )
 	SendPropInt		(SENDINFO(m_bSimulatedEveryTick),		1, SPROP_UNSIGNED ),
 	SendPropInt		(SENDINFO(m_bAnimatedEveryTick),		1, SPROP_UNSIGNED ),
 	SendPropBool( SENDINFO( m_bAlternateSorting )),
+	SendPropBool( SENDINFO( m_bIsMirrorOnly )),
+	SendPropBool( SENDINFO( m_bGlow )),
+	SendPropInt( SENDINFO( m_GlowColor ), 32, SPROP_UNSIGNED, SendProxy_Color32ToInt ),
 
 #ifdef TF_DLL
 	SendPropArray3( SENDINFO_ARRAY3(m_nModelIndexOverrides), SendPropInt( SENDINFO_ARRAY(m_nModelIndexOverrides), SP_MODEL_INDEX_BITS, 0 ) ),
@@ -358,6 +361,14 @@ CBaseEntity::CBaseEntity( bool bServerOnly )
 #endif
 
 	m_bAlternateSorting = false;
+	m_bIsMirrorOnly = false;
+	m_bUHKickableDoor = true;
+	m_bGlow = false;
+	m_bHardGlow = false;
+	m_GlowColor.SetR( 230 );
+	m_GlowColor.SetG( 230 );
+	m_GlowColor.SetB( 100 );
+	m_GlowColor.SetA( 100 );
 	m_CollisionGroup = COLLISION_GROUP_NONE;
 	m_iParentAttachment = 0;
 	CollisionProp()->Init( this );
@@ -1866,6 +1877,12 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 	DEFINE_FIELD( m_bSimulatedEveryTick, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bAnimatedEveryTick, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bAlternateSorting, FIELD_BOOLEAN ),
+	DEFINE_KEYFIELD( m_bIsMirrorOnly, FIELD_BOOLEAN, "uh_rendermirrorsonly" ),
+	DEFINE_KEYFIELD( m_bUHKickableDoor, FIELD_BOOLEAN, "kickable" ),
+	DEFINE_FIELD( m_bGlow, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_bHardGlow, FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_GlowColor, FIELD_COLOR32 ),
+	DEFINE_OUTPUT( m_OnKicked, "OnKicked" ),
 	DEFINE_KEYFIELD( m_spawnflags, FIELD_INTEGER, "spawnflags" ),
 	DEFINE_FIELD( m_nTransmitStateOwnedCounter, FIELD_CHARACTER ),
 	DEFINE_FIELD( m_angAbsRotation, FIELD_VECTOR ),
@@ -1902,6 +1919,8 @@ BEGIN_DATADESC_NO_BASE( CBaseEntity )
 	DEFINE_INPUTFUNC( FIELD_INTEGER, "Alpha", InputAlpha ),
 	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "AlternativeSorting", InputAlternativeSorting ),
 	DEFINE_INPUTFUNC( FIELD_COLOR32, "Color", InputColor ),
+	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "Glow", InputGlow ),
+	DEFINE_INPUTFUNC( FIELD_COLOR32, "SetGlowColor", InputSetGlowColor ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "SetParent", InputSetParent ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "SetParentAttachment", InputSetParentAttachment ),
 	DEFINE_INPUTFUNC( FIELD_STRING, "SetParentAttachmentMaintainOffset", InputSetParentAttachmentMaintainOffset ),
@@ -3996,6 +4015,22 @@ void CBaseEntity::InputColor( inputdata_t &inputdata )
 	color32 clr = inputdata.value.Color32();
 
 	SetRenderColor( clr.r, clr.g, clr.b );
+}
+
+void CBaseEntity::InputSetGlowColor( inputdata_t &inputdata )
+{
+	m_GlowColor = inputdata.value.Color32();
+}
+
+void CBaseEntity::InputGlow( inputdata_t &inputdata )
+{
+	RemoveEffects( EF_BRIGHTLIGHT );
+	color32 renderColor = GetRenderColor();
+	color32 glowColor = m_GlowColor;
+	if ( renderColor.r == glowColor.r && renderColor.g == glowColor.g && renderColor.b == glowColor.b )
+		SetRenderColor( 255, 255, 255, renderColor.a );
+	m_bGlow = inputdata.value.Bool();
+	m_bHardGlow = m_bGlow;
 }
 
 

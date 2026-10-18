@@ -15,6 +15,7 @@
 
 #include "c_baseplayer.h"
 #include "c_hl2_playerlocaldata.h"
+#include "underhell/uh_inventory.h"
 
 class C_BaseHLPlayer : public C_BasePlayer
 {
@@ -54,10 +55,35 @@ public:
 
 public:
 
+	int							m_iInventory[UH_INVENTORY_SLOTS];
+
 	C_HL2PlayerLocalData		m_HL2Local;
 	EHANDLE				m_hClosestNPC;
 	float				m_flSpeedModTime;
 	bool				m_fIsSprinting;
+
+	bool						m_bShoulderFlashlight;
+	bool						m_bFlashlightOn;
+	bool						m_bDisplayHermitCard;
+	bool						m_bInventoryEnabled;
+	int							m_iUHBatteryCount;
+	int							m_iUHHermitCardsCount;
+	int							m_iUHHermitCurrentQuestCount;
+	int							m_iUHHermitTotalQuestCount;
+	int							m_iEndurance;
+	int							m_iBleedCounter;
+	float						m_flUHBatteryCharge;
+	bool						m_bIronSighted;
+	float						m_fIronsightedTime;
+	float						m_flUseReticleTime;
+	bool						m_bHavePistolSilencer;
+	bool						m_bHaveRifleSilencer;
+	bool						m_bLaserToggleState;
+	bool						m_bKickMarker;
+	bool						m_bNightVisionOn;
+	bool						m_bGasMaskOn;
+	bool						m_bLeftArmDeployed;
+	bool						m_bHoldingFlare;
 
 private:
 	C_BaseHLPlayer( const C_BaseHLPlayer & ); // not defined, not accessible

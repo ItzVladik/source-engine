@@ -1132,6 +1132,7 @@ void CAI_BaseNPC::TraceAttack( const CTakeDamageInfo &info, const Vector &vecDir
 
 	SetLastHitGroup( ptr->hitgroup );
 	m_nForceBone = ptr->physicsbone;		// save this bone for physics forces
+	UH_ConsiderGib( ptr->hitgroup, info.GetDamage(), ptr->endpos, vecDir );
 
 	Assert( m_nForceBone > -255 && m_nForceBone < 256 );
 
@@ -2082,6 +2083,7 @@ void CAI_BaseNPC::OnListened()
 		COND_HEAR_PHYSICS_DANGER,
 		COND_HEAR_BULLET_IMPACT,
 		COND_HEAR_MOVE_AWAY,
+		COND_HEAR_FMRADIO,
 
 		COND_NO_HEAR_DANGER,
 
@@ -2127,6 +2129,7 @@ void CAI_BaseNPC::OnListened()
 				case SOUND_DANGER_SNIPERONLY:/* silence warning */					break;
 				case SOUND_MOVE_AWAY:		condition = COND_HEAR_MOVE_AWAY;		break;
 				case SOUND_PLAYER_VEHICLE:	condition = COND_HEAR_PLAYER;			break;
+				case SOUND_FMRADIO:			condition = COND_HEAR_FMRADIO;			break;
 
 				default:
 					DevMsg( "**ERROR: NPC %s hearing sound of unknown type %d!\n", GetClassname(), pCurrentSound->SoundType() );
@@ -3904,6 +3907,8 @@ void CAI_BaseNPC::NPCThink( void )
 	{
 		CheckPhysicsContacts();
 	}
+	UH_SpotBodiesThink();
+	UH_TempSquadUpdate();
 
 	Assert( !(m_NPCState == NPC_STATE_DEAD && m_lifeState == LIFE_ALIVE) );
 
@@ -10670,6 +10675,34 @@ BEGIN_DATADESC( CAI_BaseNPC )
 	DEFINE_FIELD( m_flTimeLastMovement,			FIELD_TIME ),
 	DEFINE_KEYFIELD(m_spawnEquipment,			FIELD_STRING, "additionalequipment" ),
   	DEFINE_FIELD( m_fNoDamageDecal,			FIELD_BOOLEAN ),
+	DEFINE_KEYFIELD( m_uh_bodygroup,			FIELD_STRING, "uh_bodygroup" ),
+	DEFINE_KEYFIELD( m_flUhFOV,					FIELD_FLOAT,  "uh_fos" ),
+	DEFINE_KEYFIELD( m_flUhViewDistance,		FIELD_FLOAT,  "uh_viewdistance" ),
+	DEFINE_KEYFIELD( m_bUhSquadTemp,			FIELD_BOOLEAN, "squadtemp" ),
+	DEFINE_KEYFIELD( m_bUhSpotBodies,			FIELD_BOOLEAN, "uh_spotbodies" ),
+	DEFINE_FIELD( m_bUHGibable,				FIELD_BOOLEAN ),
+	DEFINE_FIELD( m_iUHGibType,				FIELD_INTEGER ),
+	DEFINE_ARRAY( m_iUHPartHealth,			FIELD_INTEGER, 5 ),
+	DEFINE_FIELD( m_iUHHelmetHealth,			FIELD_INTEGER ),
+	DEFINE_FIELD( m_nUHSeveredParts,			FIELD_INTEGER ),
+	DEFINE_ARRAY( m_iszUHGibModel,			FIELD_STRING, 4 ),
+	DEFINE_FIELD( m_flNextSpotBodiesTime,	FIELD_TIME ),
+	DEFINE_FIELD( m_flNextTempSquadTime,		FIELD_TIME ),
+	DEFINE_OUTPUT( m_OnSpotSoldierBody,			"OnSpotSoldierBody" ),
+	DEFINE_OUTPUT( m_OnSpotInfectedBody,		"OnSpotInfectedBody" ),
+	DEFINE_OUTPUT( m_OnSpotDefaultBody,			"OnSpotDefaultBody" ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetSquadTemp", InputSetSquadTemp ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetFos", InputSetFos ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "SetViewDistance", InputSetViewDistance ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "SetSpotBodiesOn", InputSetSpotBodiesOn ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "SetSpotBodiesOff", InputSetSpotBodiesOff ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "RushEntity", InputRushEntity ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "WalkToEntity", InputWalkToEntity ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "GibHead", InputGibHead ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "GibLeftArm", InputGibLeftArm ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "GibRightArm", InputGibRightArm ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "GibLeftLeg", InputGibLeftLeg ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "GibRightLeg", InputGibRightLeg ),
   	DEFINE_FIELD( m_hStoredPathTarget,			FIELD_EHANDLE ),
 	DEFINE_FIELD( m_vecStoredPathGoal,		FIELD_POSITION_VECTOR ),
 	DEFINE_FIELD( m_nStoredPathType,			FIELD_INTEGER ),
@@ -10866,11 +10899,13 @@ void CAI_BaseNPC::Activate( void )
 	m_ScheduleHistory.RemoveAll();
 #endif//AI_MONITOR_FOR_OSCILLATION
 
+	UH_ApplySpawnSettings();
 }
 
 void CAI_BaseNPC::Precache( void )
 {
 	gm_iszPlayerSquad = AllocPooledString( PLAYER_SQUADNAME ); // cache for fast IsPlayerSquad calls
+	UH_PrecacheGibModels();
 
 	if ( m_spawnEquipment != NULL_STRING && strcmp(STRING(m_spawnEquipment), "0") )
 	{

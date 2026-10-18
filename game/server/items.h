@@ -54,6 +54,7 @@ public:
 	virtual void ItemTouch( CBaseEntity *pOther );
 	virtual void Materialize( void );
 	virtual bool MyTouch( CBasePlayer *pPlayer ) { return false; };
+	void	FirePlayerPickupOutput( CBasePlayer *pPlayer ) { m_OnPlayerTouch.FireOutput( pPlayer, this ); }
 
 	// Become touchable when we are at rest
 	virtual void OnEntityEvent( EntityEvent_t event, void *pEventData );

@@ -326,6 +326,7 @@ IMPLEMENT_SERVERCLASS_ST(CPropVehicleDriveable, DT_PropVehicleDriveable)
 	SendPropVector(SENDINFO(m_vecEyeExitEndpoint), -1, SPROP_COORD),
 	SendPropBool(SENDINFO(m_bHasGun)),
 	SendPropVector(SENDINFO(m_vecGunCrosshair), -1, SPROP_COORD),
+	SendPropBool(SENDINFO(m_bPlayerAtGun)),
 END_SEND_TABLE();
 
 BEGIN_DATADESC( CPropVehicleDriveable )
@@ -334,6 +335,7 @@ BEGIN_DATADESC( CPropVehicleDriveable )
 	DEFINE_INPUTFUNC( FIELD_VOID, "Unlock",	InputUnlock ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOn",	InputTurnOn ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "TurnOff", InputTurnOff ),
+	DEFINE_INPUTFUNC( FIELD_VOID, "ToggleGunMode", InputToggleGunMode ),
 	DEFINE_INPUT( m_bHasGun, FIELD_BOOLEAN, "EnableGun" ),
 
 	// Outputs
@@ -366,6 +368,7 @@ BEGIN_DATADESC( CPropVehicleDriveable )
 	//DEFINE_FIELD( m_flNoImpactDamageTime, FIELD_TIME ),
 
 	DEFINE_FIELD( m_hNPCDriver, FIELD_EHANDLE ),
+	DEFINE_FIELD( m_bPlayerAtGun, FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_hKeepUpright, FIELD_EHANDLE ),
 
 END_DATADESC()
@@ -384,6 +387,7 @@ CPropVehicleDriveable::CPropVehicleDriveable( void ) :
 {
 	m_vecEyeExitEndpoint.Init();
 	m_vecGunCrosshair.Init();
+	m_bPlayerAtGun = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -565,9 +569,6 @@ void CPropVehicleDriveable::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, 
 //-----------------------------------------------------------------------------
 CBaseEntity *CPropVehicleDriveable::GetDriver( void ) 
 { 
-	if ( m_hNPCDriver ) 
-		return m_hNPCDriver; 
-
 	return m_hPlayer; 
 }
 
@@ -671,7 +672,10 @@ void CPropVehicleDriveable::DriveVehicle( float flFrameTime, CUserCmd *ucmd, int
 {
 	int iButtons = ucmd->buttons;
 
-	m_VehiclePhysics.UpdateDriverControls( ucmd, flFrameTime );
+	if ( !m_bPlayerAtGun )
+	{
+		m_VehiclePhysics.UpdateDriverControls( ucmd, flFrameTime );
+	}
 
 	m_nSpeed = m_VehiclePhysics.GetSpeed();	//send speed to client
 	m_nRPM = clamp( m_VehiclePhysics.GetRPM(), 0, 4095 );
@@ -813,6 +817,11 @@ bool CPropVehicleDriveable::CanEnterVehicle( CBaseEntity *pEntity )
 
 	// Prevent entering if the vehicle's locked, or if it's moving too fast.
 	return ( !m_bLocked && (m_nSpeed <= m_flMinimumSpeedToEnterExit) );
+}
+
+void CPropVehicleDriveable::InputToggleGunMode( inputdata_t &inputdata )
+{
+	m_bPlayerAtGun = !m_bPlayerAtGun;
 }
 
 //-----------------------------------------------------------------------------

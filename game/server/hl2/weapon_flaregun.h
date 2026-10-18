@@ -47,6 +47,7 @@ public:
 	void	Activate( void );
 
 	void	StartBurnSound( void );
+	void	SetGlowStickMode( int nSkin ) { m_bGlowStick = true; m_bSmoke = false; m_nSkinNumber = nSkin; }
 
 	void	Start( float lifeTime );
 	void	Die( float fadeTime );
@@ -79,6 +80,8 @@ public:
 	CNetworkVar( bool, m_bLight );
 	CNetworkVar( bool, m_bSmoke );
 	CNetworkVar( bool, m_bPropFlare );
+	CNetworkVar( bool, m_bGlowStick );
+	CNetworkVar( int, m_nSkinNumber );
 
 	bool		m_bInActiveList;
 	CFlare *	m_pNextFlare;

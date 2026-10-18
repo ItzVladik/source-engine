@@ -44,6 +44,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+ConVar cl_player_render_mirror( "cl_player_render_mirror", "1", FCVAR_CHEAT, "Enable or disable player mirror/monitor rendering" );
+ConVar cl_uh_render_debug( "cl_uh_render_debug", "0", 0, "Log Underhell mirror and monitor rendering" );
 
 #ifdef INTERPOLATEDVAR_PARANOID_MEASUREMENT
 	int g_nInterpolatedVarsChanged = 0;
@@ -472,6 +474,9 @@ BEGIN_RECV_TABLE_NOBASE(C_BaseEntity, DT_BaseEntity)
 	RecvPropInt		( RECVINFO( m_bSimulatedEveryTick ), 0, RecvProxy_InterpolationAmountChanged ),
 	RecvPropInt		( RECVINFO( m_bAnimatedEveryTick ), 0, RecvProxy_InterpolationAmountChanged ),
 	RecvPropBool	( RECVINFO( m_bAlternateSorting ) ),
+	RecvPropBool	( RECVINFO( m_bIsMirrorOnly ) ),
+	RecvPropBool	( RECVINFO( m_bGlow ) ),
+	RecvPropInt	( RECVINFO( m_GlowColor ), 0, RecvProxy_IntToColor32 ),
 
 #ifdef TF_CLIENT_DLL
 	RecvPropArray3( RECVINFO_ARRAY(m_nModelIndexOverrides),	RecvPropInt( RECVINFO(m_nModelIndexOverrides[0]) ) ),
@@ -910,6 +915,12 @@ C_BaseEntity::C_BaseEntity() :
 
 	SetPredictionEligible( false );
 	m_bPredictable = false;
+	m_bIsMirrorOnly = false;
+	m_bGlow = false;
+	m_GlowColor.r = 230;
+	m_GlowColor.g = 230;
+	m_GlowColor.b = 100;
+	m_GlowColor.a = 100;
 
 	m_bSimulatedEveryTick = false;
 	m_bAnimatedEveryTick = false;
@@ -1973,6 +1984,9 @@ int C_BaseEntity::DrawBrushModel( bool bDrawingTranslucency, int nFlags, bool bT
 int C_BaseEntity::DrawModel( int flags )
 {
 	if ( !m_bReadyToDraw )
+		return 0;
+
+	if ( m_bIsMirrorOnly && ( !cl_player_render_mirror.GetBool() || !g_bRenderingReflectiveGlass ) )
 		return 0;
 
 	int drawn = 0;

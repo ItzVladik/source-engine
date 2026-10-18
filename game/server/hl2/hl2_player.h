@@ -14,6 +14,9 @@
 #include "hl2_playerlocaldata.h"
 #include "simtimer.h"
 #include "soundenvelope.h"
+#include "underhell/uh_inventory.h"
+
+class CCommand;
 
 class CAI_Squad;
 class CPropCombineBall;
@@ -239,6 +242,8 @@ public:
 	// physics interactions
 	virtual void		PickupObject( CBaseEntity *pObject, bool bLimitMassAndSize );
 	virtual	bool		IsHoldingEntity( CBaseEntity *pEnt );
+	void				UH_BeginCarryRagdoll( CBaseEntity *pRagdoll );
+	void				UH_UpdateCarryRagdollWeight( void );
 	virtual void		ForceDropOfCarriedPhysObjects( CBaseEntity *pOnlyIfHoldindThis );
 	virtual float		GetHeldObjectMass( IPhysicsObject *pHeldObject );
 
@@ -294,12 +299,189 @@ protected:
 	virtual void		ItemPostFrame();
 	virtual void		PlayUseDenySound();
 
+public:
+	//-----------------------------------------------------------------------------
+	// Underhell (ported from source-sdk-2007 / Underhell-RE)
+	//-----------------------------------------------------------------------------
+	virtual bool		UH_ItemAction( int iSlot, bool bUse );
+
+	void				UH_SpawnItemInWorld( int iItem );
+	void				UH_InitializeInventory( void );
+	void				UH_AddInventoryItem( int iItem );
+	void				UH_RemoveInventoryItem( int iSlot );
+	int					UH_FindInventoryItem( int iItem ) const;
+	int					UH_FindFreeSlot( void ) const;
+	void				UH_GiveItem( int iItem );
+	bool				UH_HandleInventoryCommand( const CCommand &args );
+	void				UH_UpdateInventory( void );
+
+	void				UH_InitializeEndurance( void );
+	bool				UH_Eat( float flEndurance, float flHealth, const char *pszEatSound );
+	bool				UH_Drink( float flEndurance, float flHealth, int iFlavor );
+	void				UH_UpdateEndurance( void );
+	int					UH_GetEndurance( void ) const { return m_iEndurance; }
+	void				UH_SetEndurance( int iEndurance ) { m_iEndurance = iEndurance; }
+	int					UH_GetBleedCounter( void ) const { return m_iBleedCounter; }
+	void				UH_SetBleedCounter( int iBleedCounter ) { m_iBleedCounter = iBleedCounter; }
+	void				UH_SetLastBleedTime( float flTime ) { m_flLastBleedTime = flTime; }
+	void				UH_StartBleeding( float flDamage );
+	void				UH_UpdateBleeding( void );
+
+	void				UH_SetHermitCards( int iCards, int iQuestCurrent, int iQuestTotal )
+	{
+		m_iUHHermitCardsCount = iCards;
+		m_iUHHermitCurrentQuestCount = iQuestCurrent;
+		m_iUHHermitTotalQuestCount = iQuestTotal;
+		if ( iCards > 0 )
+			m_bDisplayHermitCard = true;
+	}
+	int					UH_GetHermitCardsCount( void ) const { return m_iUHHermitCardsCount; }
+	int					UH_GetBatteryCount( void ) const { return m_iUHBatteryCount; }
+	void				UH_AddBattery( int iCount )
+	{
+		const bool bWasEmpty = ( m_iUHBatteryCount <= 0 );
+		m_iUHBatteryCount = clamp( m_iUHBatteryCount + iCount, 0, 20 );
+		if ( bWasEmpty && m_iUHBatteryCount > 0 )
+		{
+			m_HL2Local.m_flFlashBattery = 100.0f;
+			m_flUHBatteryCharge = 100.0f;
+		}
+	}
+	void				UH_UpdateFlashlightBattery( void );
+	bool				UH_HasNightVision( void ) const { return m_bHaveNightVision; }
+	void				UH_SetHaveNightVision( bool bHave ) { m_bHaveNightVision = bHave; }
+	bool				UH_HasGasMask( void ) const { return m_bHaveGasMask; }
+	void				UH_SetHaveGasMask( bool bHave ) { m_bHaveGasMask = bHave; }
+	bool				UH_IsGasMaskOn( void ) const { return m_bGasMaskOn; }
+	bool				UH_IsNightVisionOn( void ) const { return m_bNightVisionOn; }
+	void				UH_SetShoulderFlashlight( bool bHave ) { m_bShoulderFlashlight = bHave; }
+	void				UH_SetFlashlightOn( bool bOn ) { m_bFlashlightOn = bOn; }
+	bool				UH_IsLaserOn( void ) const { return m_bLaserToggleState; }
+	void				UH_SetLaserOn( bool bOn ) { m_bLaserToggleState = bOn; }
+	bool				UH_IsIronSighted( void ) const { return m_bIronSighted; }
+	bool				UH_IsWeaponObstructed( void ) const { return m_bUHWeaponObstructed; }
+	void				UH_UpdateWeaponObstruction( void );
+	void				UH_ToggleIronsight( void );
+	void				UH_DisableIronsight( void );
+	void				UH_ToggleSilencer( void );
+	void				UH_ToggleLaser( void );
+	void				UH_DropWeapon( void );
+	void				UH_ThrowNade( void );
+	void				UH_LeftArmContextThink( void );
+	void				UH_FlashlightViewModelThink( void );
+	void				UH_ThrowFlare( void );
+	void				UH_StartFlareStrike( void );
+	void				UH_FlareHitContextThink( void );
+	void				UH_UpdateLeftArm( void );
+	void				UH_EquipFlare( void );
+	void				UH_HolsterLeftArm( void );
+	void				UH_SetLeftArmModel( const char *pszModel, int nSkin, bool bDeployed );
+	CBaseCombatWeapon	*UH_FindOneHandedWeapon( void );
+	bool				UH_IsFlashlightInLeftArm( void ) const { return !m_bShoulderFlashlight; }
+	void				UH_ToggleNightVision( void );
+	void				UH_ToggleGasMask( void );
+	void				UH_StopGasMaskBreath( void );
+	void				InputSetPistolSilencer( inputdata_t &inputdata );
+	void				InputSetRifleSilencer( inputdata_t &inputdata );
+	void				InputSetNightVision( inputdata_t &inputdata );
+	void				InputSetGasMask( inputdata_t &inputdata );
+	void				InputDisableDropWeapon( inputdata_t &inputdata );
+	void				InputEnableDropWeapon( inputdata_t &inputdata );
+	void				InputSetPlayerModel( inputdata_t &inputdata );
+	void				InputSetPlayerSkin( inputdata_t &inputdata );
+	void				InputViewModelSkin( inputdata_t &inputdata );
+	void				InputSetPlayerKickModel( inputdata_t &inputdata );
+	void				InputBleedPlayer( inputdata_t &inputdata );
+	void				InputDisableInventory( inputdata_t &inputdata );
+	void				InputEnableInventory( inputdata_t &inputdata );
+	void				InputDisplayHermitCards( inputdata_t &inputdata );
+	void				InputRemoveEndurance( inputdata_t &inputdata );
+	void				InputRemoveLitGlowstick( inputdata_t &inputdata );
+	void				InputSetStatusVisibility( inputdata_t &inputdata );
+	void				UH_UpdateLookGlow( void );
+	void				InputGive( inputdata_t &inputdata );
+	void				InputGiveInv( inputdata_t &inputdata );
+	void				UH_Kick( void );
+	void				UH_KickThink( void );
+	void				UH_DoKickStrike( void );
+	bool				UH_CanKick( void );
+	void				InputDisableKick( inputdata_t &inputdata );
+	void				InputEnableKick( inputdata_t &inputdata );
+	void				InputEnableBt( inputdata_t &inputdata );
+	void				InputDisableBt( inputdata_t &inputdata );
+	void				UH_EndBulletTimeThink( void );
+	void				UH_SetKickViewModel( const char *pszModel );
+	CBaseEntity			*UH_GetActiveGlowStick( void ) const { return m_hActiveGlowStick.Get(); }
+	void				UH_SetActiveGlowStick( CBaseEntity *pGlowStick ) { m_hActiveGlowStick.Set( pGlowStick ); }
+	CBaseEntity			*UH_GetActiveGlowStickLight( void ) const { return m_hActiveGlowStickLight.Get(); }
+	void				UH_SetActiveGlowStickLight( CBaseEntity *pLight ) { m_hActiveGlowStickLight.Set( pLight ); }
+	bool				UH_HandleObjectiveCommand( const CCommand &args );
+	void				UH_DisplayObjective( void );
+	void				UH_TriggerMapEntity( const char *pszTargetName );
+
 private:
 	bool				CommanderExecuteOne( CAI_BaseNPC *pNpc, const commandgoal_t &goal, CAI_BaseNPC **Allies, int numAllies );
 
 	void				OnSquadMemberKilled( inputdata_t &data );
 
 	Class_T				m_nControlClass;			// Class when player is controlling another entity
+
+	CNetworkArray( int, m_iInventory, UH_INVENTORY_SLOTS );
+	CNetworkVar( bool, m_bShoulderFlashlight );
+	CNetworkVar( int, m_iUHBatteryCount );
+	CNetworkVar( int, m_iUHHermitCardsCount );
+	CNetworkVar( int, m_iUHHermitCurrentQuestCount );
+	CNetworkVar( int, m_iUHHermitTotalQuestCount );
+	CNetworkVar( bool, m_bDisplayHermitCard );
+	CNetworkVar( bool, m_bFlashlightOn );
+	CNetworkVar( bool, m_bInventoryEnabled );
+	CNetworkVar( int, m_iEndurance );
+	CNetworkVar( int, m_iBleedCounter );
+	CNetworkVar( float, m_flUHBatteryCharge );
+	CNetworkVar( bool, m_bIronSighted );
+	bool				m_bUHWeaponObstructed;
+	CNetworkVar( float, m_fIronsightedTime );
+	CNetworkVar( bool, m_bHavePistolSilencer );
+	CNetworkVar( bool, m_bHaveRifleSilencer );
+	CNetworkVar( bool, m_bLaserToggleState );
+	bool				m_bHaveNightVision;
+	bool				m_bHaveGasMask;
+	CNetworkVar( bool, m_bNightVisionOn );
+	CNetworkVar( bool, m_bGasMaskOn );
+	bool				m_bNightVisionEnabled;
+	bool				m_bGasMaskEnabled;
+	CSoundPatch			*m_pGasMaskBreathLoop;
+	CNetworkVar( bool, m_bLeftArmDeployed );
+	CNetworkVar( bool, m_bHoldingFlare );
+	float				m_flFlareStartTime;
+	EHANDLE				m_hHeldFlareEffect;
+	EHANDLE				m_hHeldFlareSprite;
+	bool				m_bFlareMarker;
+	bool				m_bFlareStrikePending;
+	float				m_flNextFlareStrike;
+	bool				m_bFlashlightHolstered;
+	float				m_flPseudoEndurance;
+	float				m_flPseudoHealth;
+	float				m_fEStaminaCount;
+	float				m_flLastBleedTime;
+	float				m_flLastBleedTickBase;
+	int					m_iEHealthCount;
+	EHANDLE				m_hActiveGlowStick;
+	EHANDLE				m_hActiveGlowStickLight;
+	EHANDLE				m_hUHLookGlowTarget;
+	float				m_flNextUHLookGlowTime;
+	EHANDLE				m_hCarryingRagdoll;
+	float				m_fSavedSensitivity;
+	Vector				m_vecUHFreeAimTarget;
+	bool				m_bBulletTimeDisabled;
+	bool				m_bDisableWeaponDrop;
+	string_t			m_iszKickViewModel;
+	CNetworkVar( bool, m_bKickMarker );
+	bool				m_bKickActive;
+	bool				m_bKickDisabled;
+	COutputEvent		m_OnDisabledKickAttempted;
+	float				m_flNextFlashlightBatteryTime;
+
 	// This player's HL2 specific data that should only be replicated to 
 	//  the player and not to other players.
 	CNetworkVarEmbedded( CHL2PlayerLocalData, m_HL2Local );

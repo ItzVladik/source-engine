@@ -79,12 +79,45 @@ void CNPC_CombineS::Spawn( void )
 
 	BaseClass::Spawn();
 
+	SpawnUHShield();
+	if ( m_hUHShield.Get() )
+		SetKickDamage( ( IsElite() ? sk_combine_guard_kick.GetFloat() : sk_combine_s_kick.GetFloat() ) * 2.0f );
+
 #if HL2_EPISODIC
 	if (m_iUseMarch && !HasSpawnFlags(SF_NPC_START_EFFICIENT))
 	{
 		Msg( "Soldier %s is set to use march anim, but is not an efficient AI. The blended march anim can only be used for dead-ahead walks!\n", GetDebugName() );
 	}
 #endif
+}
+
+void CNPC_CombineS::SpawnUHShield( void )
+{
+	m_hUHShield = NULL;
+	if ( m_iUHShieldType <= 0 )
+		return;
+
+	int iArmor = FindBodygroupByName( "Armor" );
+	if ( iArmor >= 0 && GetBodygroup( iArmor ) != 3 )
+		return;
+
+	CBaseEntity *pShield = CreateEntityByName( "item_shield" );
+	if ( !pShield )
+		return;
+
+	const bool bBallistic = m_iUHShieldType == 4 || m_iUHShieldType == 5 ||
+		( m_iUHShieldType == 1 && random->RandomInt( 0, 1 ) != 0 );
+	DispatchSpawn( pShield );
+	pShield->SetModel( bBallistic ? "models/items/ballisticshield.mdl" : "models/items/riotshield.mdl" );
+	pShield->SetName( AllocPooledString( "Shield" ) );
+	pShield->SetSolid( SOLID_NONE );
+	pShield->SetMoveType( MOVETYPE_NONE );
+	int iAttachment = LookupAttachment( "Shield" );
+	pShield->SetParent( this, iAttachment > 0 ? iAttachment : -1 );
+	pShield->SetLocalOrigin( vec3_origin );
+	pShield->SetLocalAngles( vec3_angle );
+	pShield->SetOwnerEntity( this );
+	m_hUHShield = pShield;
 }
 
 //-----------------------------------------------------------------------------
@@ -112,17 +145,58 @@ void CNPC_CombineS::Precache()
 
 	PrecacheModel( STRING( GetModelName() ) );
 
+	PrecacheModel( "models/gibs/bodyparts/soldier/leftarm.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/soldier/rightarm.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/soldier/leftleg.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/soldier/rightleg.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/soldier/leftleg2.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/soldier/rightleg2.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/soldier_prisonguard/leftarm.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/soldier_prisonguard/rightarm.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/soldier_prisonguard/leftleg.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/soldier_prisonguard/rightleg.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/pmc/pmc_leftarm.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/pmc/pmc_rightarm.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/pmc/pmc_leftleg.mdl" );
+	PrecacheModel( "models/gibs/bodyparts/pmc/pmc_rightleg.mdl" );
+
 	UTIL_PrecacheOther( "item_healthvial" );
 	UTIL_PrecacheOther( "weapon_frag" );
 	UTIL_PrecacheOther( "item_ammo_ar2_altfire" );
+	UTIL_PrecacheOther( "item_shield" );
+	PrecacheModel( "models/items/ballisticshield.mdl" );
+	PrecacheModel( "models/items/riotshield.mdl" );
 
 	BaseClass::Precache();
 }
 
 
+void CNPC_CombineS::PainSound( const CTakeDamageInfo &info )
+{
+	if ( ( GetFlags() & FL_DISSOLVING ) || gpGlobals->curtime <= m_flNextUHPainSoundTime )
+		return;
+
+	const bool bPrisonGuard = V_stristr( STRING( GetModelName() ), "prisonguard" ) != NULL;
+	const float flHealthRatio = (float)GetHealth() / (float)max( 1, GetMaxHealth() );
+	const char *pszSentence = bPrisonGuard ? "COMBINEPRISONGUARD_PAIN" : "COMBINE_PAIN";
+
+	if ( !HasMemory( bits_MEMORY_CUSTOM1 ) && flHealthRatio > 0.9f )
+	{
+		Remember( bits_MEMORY_CUSTOM1 );
+		pszSentence = bPrisonGuard ? "COMBINEPRISONGUARD_TAUNT" : "COMBINE_TAUNT";
+	}
+	else if ( !HasMemory( bits_MEMORY_CUSTOM2 ) && flHealthRatio <= 0.5f )
+	{
+		Remember( bits_MEMORY_CUSTOM2 );
+		pszSentence = bPrisonGuard ? "COMBINEPRISONGUARD_COVER" : "COMBINE_COVER";
+	}
+
+	GetSentences()->Speak( pszSentence, SENTENCE_PRIORITY_INVALID, SENTENCE_CRITERIA_ALWAYS );
+	m_flNextUHPainSoundTime = gpGlobals->curtime + 1.0f;
+}
+
 void CNPC_CombineS::DeathSound( const CTakeDamageInfo &info )
 {
-	// NOTE: The response system deals with this at the moment
 	if ( GetFlags() & FL_DISSOLVING )
 		return;
 
@@ -280,6 +354,18 @@ void CNPC_CombineS::OnListened()
 //-----------------------------------------------------------------------------
 void CNPC_CombineS::Event_Killed( const CTakeDamageInfo &info )
 {
+	CBaseEntity *pShield = m_hUHShield.Get();
+	if ( pShield )
+	{
+		pShield->SetParent( NULL );
+		pShield->SetOwnerEntity( NULL );
+		pShield->SetSolid( SOLID_BBOX );
+		pShield->SetMoveType( MOVETYPE_FLYGRAVITY );
+		pShield->SetGravity( 1.0f );
+		pShield->SetAbsVelocity( RandomVector( -64.0f, 64.0f ) + Vector( 0, 0, 100 ) );
+		m_hUHShield = NULL;
+	}
+
 	// Don't bother if we've been told not to, or the player has a megaphyscannon
 	if ( combine_spawn_health.GetBool() == false || PlayerHasMegaPhysCannon() )
 	{
@@ -418,14 +504,18 @@ Activity CNPC_CombineS::NPC_TranslateActivity( Activity eNewActivity )
 
 	return BaseClass::NPC_TranslateActivity( eNewActivity );
 }
-
+#endif
 
 //---------------------------------------------------------
 // Save/Restore
 //---------------------------------------------------------
 BEGIN_DATADESC( CNPC_CombineS )
 
+	DEFINE_FIELD( m_flNextUHPainSoundTime, FIELD_TIME ),
+	DEFINE_KEYFIELD( m_iUHShieldType, FIELD_INTEGER, "Shield" ),
+	DEFINE_FIELD( m_hUHShield, FIELD_EHANDLE ),
+#if HL2_EPISODIC
 	DEFINE_KEYFIELD( m_iUseMarch, FIELD_INTEGER, "usemarch" ),
+#endif
 
 END_DATADESC()
-#endif

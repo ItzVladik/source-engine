@@ -12,6 +12,7 @@
 #endif
 
 #include "shareddefs.h"
+#include "mathlib/vector.h"
 
 class IFileSystem;
 
@@ -25,6 +26,7 @@ typedef unsigned short WEAPON_FILE_INFO_HANDLE;
 typedef enum {
 	EMPTY,
 	SINGLE,
+	SINGLE_SILENCED,	// Underhell silenced variant
 	SINGLE_NPC,
 	WPN_DOUBLE, // Can't be "DOUBLE" because windows.h uses it.
 	DOUBLE_NPC,
@@ -111,6 +113,27 @@ public:
 	bool					m_bBuiltRightHanded;
 	bool					m_bAllowFlipping;	// False to disallow flipping the model, regardless of whether
 												// it is built left or right handed.
+
+	// Underhell weapon stats (from weapon script)
+	bool					m_bOneHanded;
+	float					m_flMeleeDelayedFire;
+	float					m_flMeleeRoF;
+	float					m_flMeleeRange;
+	float					m_flStaminaToDrain;
+	float					m_flPunchPitchMin, m_flPunchPitchMax;
+	float					m_flPunchYawMin, m_flPunchYawMax;
+	float					m_flSnapPitchMin, m_flSnapPitchMax;
+	float					m_flSnapYawMin, m_flSnapYawMax;
+	float					m_flCrouchRecoilMult;
+	float					m_flCrouchAccuracyMult;
+	float					m_flRunAccuracyMult;
+	bool					m_bUHWeaponSpecial;
+	int						m_iPenetration;
+	int						m_iFireMode;
+	bool					m_bHasExpOffset;
+	Vector					m_expOffset;
+	QAngle					m_expOriOffset;
+	float					m_flAccuracy;
 
 // CLIENT DLL
 	// Sprite data, read from the data file
