@@ -32,6 +32,9 @@ private:
 
 	void InputShowHudHint( inputdata_t &inputdata );
 	void InputHideHudHint( inputdata_t &inputdata );
+	void InputHint( inputdata_t &inputdata );
+	void InputHintThroughParameter( inputdata_t &inputdata );
+	void ShowHintText( const char *pszHint );
 	string_t m_iszMessage;
 	DECLARE_DATADESC();
 };
@@ -43,6 +46,8 @@ BEGIN_DATADESC( CEnvHudHint )
 	DEFINE_KEYFIELD( m_iszMessage, FIELD_STRING, "message" ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "ShowHudHint", InputShowHudHint ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "HideHudHint", InputHideHudHint ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "InputHint", InputHint ),
+	DEFINE_INPUTFUNC( FIELD_STRING, "InputHintThroughParameter", InputHintThroughParameter ),
 
 END_DATADESC()
 
@@ -70,6 +75,30 @@ void CEnvHudHint::Precache( void )
 //-----------------------------------------------------------------------------
 // Purpose: Input handler for showing the message and/or playing the sound.
 //-----------------------------------------------------------------------------
+void CEnvHudHint::ShowHintText( const char *pszHint )
+{
+	if ( AllPlayers() )
+	{
+		CReliableBroadcastRecipientFilter user;
+		UserMessageBegin( user, "KeyHintText" );
+		WRITE_BYTE( 1 );
+		WRITE_STRING( pszHint ? pszHint : "" );
+		MessageEnd();
+		return;
+	}
+
+	CBaseEntity *pPlayer = UTIL_GetLocalPlayer();
+	if ( !pPlayer || !pPlayer->IsNetClient() )
+		return;
+
+	CSingleUserRecipientFilter user( (CBasePlayer *)pPlayer );
+	user.MakeReliable();
+	UserMessageBegin( user, "KeyHintText" );
+		WRITE_BYTE( 1 );
+		WRITE_STRING( pszHint ? pszHint : "" );
+	MessageEnd();
+}
+
 void CEnvHudHint::InputShowHudHint( inputdata_t &inputdata )
 {
 	if ( AllPlayers() )
@@ -102,6 +131,16 @@ void CEnvHudHint::InputShowHudHint( inputdata_t &inputdata )
 			WRITE_STRING( STRING(m_iszMessage) );
 		MessageEnd();
 	}
+}
+
+void CEnvHudHint::InputHint( inputdata_t &inputdata )
+{
+	ShowHintText( inputdata.value.String() );
+}
+
+void CEnvHudHint::InputHintThroughParameter( inputdata_t &inputdata )
+{
+	ShowHintText( inputdata.value.String() );
 }
 
 //-----------------------------------------------------------------------------

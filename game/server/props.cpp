@@ -41,6 +41,8 @@
 #include "physics_collisionevent.h"
 #include "gamestats.h"
 #include "vehicle_base.h"
+#include "hl2/hl2_player.h"
+#include "underhell/uh_inventory.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -53,6 +55,8 @@
 // How many times to remind the player that supply crates can be broken
 // (displayed when the supply crate is picked up)
 #define NUM_SUPPLY_CRATE_HUD_HINTS		3
+
+ConVar uh_door_bash_speed( "uh_door_bash_speed", "500", 0 );
 
 extern CBaseEntity *FindPickerEntity( CBasePlayer *pPlayer );
 
@@ -1840,6 +1844,7 @@ BEGIN_DATADESC( CDynamicProp )
 	// Outputs
 	DEFINE_OUTPUT( m_pOutputAnimBegun, "OnAnimationBegun" ),
 	DEFINE_OUTPUT( m_pOutputAnimOver, "OnAnimationDone" ),
+	DEFINE_OUTPUT( m_OnPlayerUse, "OnPlayerUse" ),
 
 	// Function Pointers
 	DEFINE_THINKFUNC( AnimThink ),
@@ -1847,6 +1852,20 @@ BEGIN_DATADESC( CDynamicProp )
 	DEFINE_EMBEDDED( m_BoneFollowerManager ),
 
 END_DATADESC()
+
+void CDynamicProp::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+{
+	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
+	if ( pPlayer )
+	{
+		m_OnPlayerUse.FireOutput( pActivator, this );
+	}
+}
+
+int CDynamicProp::ObjectCaps( void )
+{
+	return BaseClass::ObjectCaps() | FCAP_IMPULSE_USE;
+}
 
 IMPLEMENT_SERVERCLASS_ST(CDynamicProp, DT_DynamicProp)
 	SendPropBool( SENDINFO( m_bUseHitboxesForRenderBox ) ),
@@ -2184,6 +2203,26 @@ void CDynamicProp::AnimThink( void )
 		{
 			// Fire output
 			m_pOutputAnimOver.FireOutput(NULL,this);
+
+			if ( GetModelName() != NULL_STRING &&
+				 !Q_stricmp( STRING( GetModelName() ), "models/blackout.mdl" ) )
+			{
+				CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+				if ( pPlayer )
+				{
+					CBaseEntity *pCamera = gEntList.FindEntityByClassname( NULL, "point_viewcontrol" );
+					while ( pCamera )
+					{
+						if ( pCamera->GetMoveParent() == this && pPlayer->GetViewEntity() == pCamera )
+						{
+							variant_t empty;
+							pCamera->AcceptInput( "Disable", this, this, empty, 0 );
+							break;
+						}
+						pCamera = gEntList.FindEntityByClassname( pCamera, "point_viewcontrol" );
+					}
+				}
+			}
 
 			// If I'm a random animator, think again when it's time to change sequence
 			if ( m_bRandomAnimator )
@@ -2899,6 +2938,19 @@ void CPhysicsProp::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 	if ( pPlayer )
 	{
+#ifdef HL2_DLL
+		const char *pszModel = STRING( GetModelName() );
+		if ( pszModel && !Q_stricmp( pszModel, "models/PG_props/pg_obj/pg_flare.mdl" ) )
+		{
+			CHL2_Player *pHL2Player = dynamic_cast<CHL2_Player *>( pPlayer );
+			if ( pHL2Player && pHL2Player->UH_FindFreeSlot() >= 0 )
+			{
+				pHL2Player->UH_GiveItem( UH_ITEM_FLARE_PACK );
+				UTIL_Remove( this );
+				return;
+			}
+		}
+#endif
 		if ( HasSpawnFlags( SF_PHYSPROP_ENABLE_PICKUP_OUTPUT ) )
 		{
 			m_OnPlayerUse.FireOutput( this, this );
@@ -3641,6 +3693,42 @@ int	CBasePropDoor::ObjectCaps()
 {
 	return BaseClass::ObjectCaps() | ( HasSpawnFlags( SF_DOOR_IGNORE_USE ) ? 0 : (FCAP_IMPULSE_USE|FCAP_USE_IN_RADIUS) );
 };
+
+void CBasePropDoor::UHBreachDoor( CBaseEntity *pActivator, CBaseEntity *pCaller,
+	bool bNPCBreach, const Vector &vecImpact )
+{
+	if ( IsDoorLocked() )
+		return;
+
+#ifdef HL2_DLL
+	if ( !bNPCBreach )
+	{
+		CHL2_Player *pPlayer = dynamic_cast<CHL2_Player *>( pCaller );
+		if ( pPlayer )
+			pPlayer->SuitPower_Drain( 20.0f );
+	}
+#endif
+
+	m_bForceClosed = true;
+	m_flSpeed = uh_door_bash_speed.GetFloat();
+
+	if ( bNPCBreach || ( !IsDoorOpening() && !IsDoorOpen() ) )
+	{
+		DoorOpen( pCaller ? pCaller : pActivator );
+	}
+	else
+	{
+		Vector forward;
+		GetVectors( &forward, NULL, NULL );
+		Vector toImpact = vecImpact - GetAbsOrigin();
+		if ( DotProduct( forward, toImpact ) >= 0.0f )
+			DoorOpen( pCaller ? pCaller : pActivator );
+		else
+			DoorClose();
+	}
+
+	EmitSound( "Metal.Door_Breach" );
+}
 
 
 //-----------------------------------------------------------------------------

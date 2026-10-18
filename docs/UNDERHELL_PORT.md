@@ -46,12 +46,20 @@ That tree is Orange Box SDK 2007 (vcproj, episodic). This tree is a later engine
 - Flashlight flicker convars
 - Flare glowstick netvars + client colours
 
+## Fifth pass (from klaxons1/source-sdk-2013-ce)
+
+- `env_message` priority slots, titles `@` refs, GlobalEnvMessageIndex
+- `env_hudhint` InputHint / InputHintThroughParameter
+- `prop_dynamic` OnPlayerUse + impulse use; flare pack pickup; blackout camera; `UHBreachDoor`
+- `Throw_Nade` via `WeaponFrag_ThrowNow`
+- `env_global` SetGlobalOn/Off/Dead by parameter
+- Item output name `OnPlayerPickup`; UH blood decal materials kept resident
+
 ## Still not 1:1 vs SDK 2007 vanilla hunks
 
-- `EnvMessage` / `EnvHudHint` (large SDK rewrite vs TF2-era files)
-- BIK / sprite path, full viewmodel UH extras
+- BIK / sprite path
 - Full flashlight/left-arm auto-switch path
 - Shader Editor GL binary interface
-- Remaining `props.cpp` / Ace / Butcher / infected vanilla hunks (new NPCs live in `underhell/npc_*.cpp`)
+- Ace / Butcher / infected vanilla hunks (NPCs live in `underhell/npc_*.cpp`)
 
 Vanilla HL2/episodic should still build; Underhell maps need the episodic game (`-G episodic` / `hl2` with these VPCs).
