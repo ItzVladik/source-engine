@@ -90,6 +90,7 @@ enum SCOND_t
 	COND_HEAR_PHYSICS_DANGER,
 	COND_HEAR_MOVE_AWAY,
 	COND_HEAR_SPOOKY,				// Zombies make this when Alyx is in darkness mode
+	COND_HEAR_FMRADIO,
 
 	COND_NO_HEAR_DANGER,			// Since we can't use ~CONDITION. Mutually exclusive with COND_HEAR_DANGER
 

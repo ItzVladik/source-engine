@@ -19,7 +19,7 @@ That tree is Orange Box SDK 2007 (vcproj, episodic). This tree is a later engine
 - Viewmodel `m_bExpSighted` / `m_expFactor`
 - Player hooks: spawn VMs, datadesc/inputs, ClientCommand inventory/objectives, impulse 101/110, bleed, endurance recharge, flashlight flags
 
-## Second pass (this engine)
+## Second pass
 
 - Custom cameras / scope RTs (`baseclientrendertargets`, `rendertexture`, `point_camera`)
 - Monitor + scope draw, reflective-glass gate (`viewrender`, `g_bRenderingCameraView` in release)
@@ -27,9 +27,20 @@ That tree is Orange Box SDK 2007 (vcproj, episodic). This tree is a later engine
 - OTS/free-aim cursor (`in_mouse` + `uh_freeaim.h`), local player shadows / render angles / flashlight origin
 - Hidden-save proxy (`uh_hidden_save_proxy`, `uh_load_hidden_save`)
 
+## Third pass
+
+- Vehicle gunner seat (`m_bPlayerAtGun`, ToggleGunMode, gunner eyes)
+- NPC Underhell AI/dismemberment members + datadesc + think/activate/precache
+- SOUND_FMRADIO / COND_HEAR_FMRADIO
+- Weapon walk-over ammo scavenge, silencer activities
+- Bullet-time FireBullets intercept
+- View bob, OTS camera, HUD zoom/stamina swap
+- Batteries / healthkits into inventory
+- Mirror-only DrawModel on C_BaseAnimating
+
 ## Still not 1:1 vs SDK 2007 vanilla hunks
 
-These remain in the SDK repo if you need a third pass:
+These remain in the SDK repo if you need another pass:
 
 - Combine / Ace / Butcher / infected AI edits in vanilla `npc_combine*` (new NPCs are in `underhell/npc_*.cpp`)
 - Jeep gunner / bullet-time tracers in `vehicle_jeep*`

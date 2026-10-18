@@ -46,6 +46,7 @@ IMPLEMENT_CLIENTCLASS_DT(C_PropVehicleDriveable, DT_PropVehicleDriveable, CPropV
 	RecvPropVector( RECVINFO( m_vecEyeExitEndpoint ) ),
 	RecvPropBool( RECVINFO( m_bHasGun ) ),
 	RecvPropVector( RECVINFO( m_vecGunCrosshair ) ),
+	RecvPropBool( RECVINFO( m_bPlayerAtGun ) ),
 END_RECV_TABLE()
 
 

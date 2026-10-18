@@ -29,6 +29,7 @@
 	#include "player_pickup.h"
 	#include "waterbullet.h"
 	#include "func_break.h"
+	#include "underhell/uh_bullettime.h"
 
 #ifdef HL2MP
 	#include "te_hl2mp_shotgun_shot.h"
@@ -1726,6 +1727,13 @@ void CBaseEntity::FireBullets( const FireBulletsInfo_t &info )
 			vecDir = Manipulator.ApplySpread( info.m_vecSpread );
 		}
 
+#ifdef GAME_DLL
+		if ( UH_BulletTimeDeferShot( this, info, vecDir ) )
+		{
+			iSeed++;
+			continue;
+		}
+#endif
 		vecEnd = info.m_vecSrc + vecDir * info.m_flDistance;
 
 #ifdef PORTAL

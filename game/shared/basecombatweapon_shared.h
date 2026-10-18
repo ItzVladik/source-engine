@@ -192,6 +192,7 @@ public:
 	// Weapon Pickup For Player
 	virtual void			SetPickupTouch( void );
 	virtual void 			DefaultTouch( CBaseEntity *pOther );	// default weapon touch
+	virtual void 			AmmoScavengeTouch( CBaseEntity *pOther );
 	virtual void			GiveTo( CBaseEntity *pOther );
 
 	// HUD Hints

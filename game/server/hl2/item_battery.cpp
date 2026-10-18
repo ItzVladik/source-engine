@@ -21,22 +21,36 @@ public:
 	DECLARE_CLASS( CItemBattery, CItem );
 
 	void Spawn( void )
-	{ 
-		Precache( );
-		SetModel( "models/items/battery.mdl" );
-		BaseClass::Spawn( );
+	{
+		Precache();
+		SetModel( "models/PG_props/pg_obj/pg_battery.mdl" );
+		BaseClass::Spawn();
+		SetTouch( NULL );
 	}
 	void Precache( void )
 	{
-		PrecacheModel ("models/items/battery.mdl");
-
+		PrecacheModel( "models/PG_props/pg_obj/pg_battery.mdl" );
 		PrecacheScriptSound( "ItemBattery.Touch" );
-
+	}
+	void Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
+	{
+		CBasePlayer *pPlayer = ToBasePlayer( pActivator );
+		if ( pPlayer )
+			MyTouch( pPlayer );
 	}
 	bool MyTouch( CBasePlayer *pPlayer )
 	{
 		CHL2_Player *pHL2Player = dynamic_cast<CHL2_Player *>( pPlayer );
-		return ( pHL2Player && pHL2Player->ApplyBattery() );
+		if ( !pHL2Player )
+			return false;
+		if ( pHL2Player->UH_GetBatteryCount() >= 20 )
+			return false;
+		FirePlayerPickupOutput( pHL2Player );
+		pHL2Player->UH_AddBattery( 1 );
+		CPASAttenuationFilter filter( pPlayer, "ItemBattery.Touch" );
+		EmitSound( filter, pPlayer->entindex(), "ItemBattery.Touch" );
+		UTIL_Remove( this );
+		return true;
 	}
 };
 

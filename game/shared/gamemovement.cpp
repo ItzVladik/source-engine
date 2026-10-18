@@ -35,6 +35,19 @@ extern IFileSystem *filesystem;
 	static ConVar dispcoll_drawplane( "dispcoll_drawplane", "0" );
 #endif
 
+#if defined( CLIENT_DLL )
+static ConVar cl_viewbob_enabled( "cl_viewbob_enabled", "1", 0, "Oscillation Toggle", true, 0.0f, true, 1.0f );
+static ConVar cl_viewbob_frequency_x( "cl_viewbob_frequency_x", "10", 0, "Angular Frequency on X" );
+static ConVar cl_viewbob_frequency_y( "cl_viewbob_frequency_y", "10", 0, "Angular Frequency on Y" );
+static ConVar cl_viewbob_frequency_z( "cl_viewbob_frequency_z", "0", 0, "Angular Frequency on Z" );
+static ConVar cl_viewbob_magnitude_x( "cl_viewbob_magnitude_x", "0.005", 0, "Magnitude on X" );
+static ConVar cl_viewbob_magnitude_y( "cl_viewbob_magnitude_y", "0.001", 0, "Magnitude on Y" );
+static ConVar cl_viewbob_magnitude_z( "cl_viewbob_magnitude_z", "0", 0, "Magnitude on Z" );
+static ConVar cl_viewbob_phase_x( "cl_viewbob_phase_x", "0" );
+static ConVar cl_viewbob_phase_y( "cl_viewbob_phase_y", "0" );
+static ConVar cl_viewbob_phase_z( "cl_viewbob_phase_z", "0" );
+#endif
+
 
 // tickcount currently isn't set during prediction, although gpGlobals->curtime and
 // gpGlobals->frametime are. We should probably set tickcount (to player->m_nTickBase),
@@ -1200,6 +1213,17 @@ void CGameMovement::FinishTrackPredictionErrors( CBasePlayer *pPlayer )
 void CGameMovement::FinishMove( void )
 {
 	mv->m_nOldButtons = mv->m_nButtons;
+#if defined( CLIENT_DLL )
+	if ( cl_viewbob_enabled.GetBool() && !player->IsInAVehicle() )
+	{
+		const float flSpeed = mv->m_vecVelocity.Length();
+		QAngle vecOscillation(
+			flSpeed * sin( cl_viewbob_frequency_x.GetFloat() * gpGlobals->curtime + cl_viewbob_phase_x.GetFloat() ) * cl_viewbob_magnitude_x.GetFloat() * 0.01f,
+			flSpeed * sin( cl_viewbob_frequency_y.GetFloat() * gpGlobals->curtime + cl_viewbob_phase_y.GetFloat() ) * cl_viewbob_magnitude_y.GetFloat() * 0.01f,
+			flSpeed * sin( cl_viewbob_frequency_z.GetFloat() * gpGlobals->curtime + cl_viewbob_phase_z.GetFloat() ) * cl_viewbob_magnitude_z.GetFloat() * 0.01f );
+		player->ViewPunch( vecOscillation );
+	}
+#endif
 }
 
 #define PUNCH_DAMPING		9.0f		// bigger number makes the response more damped, smaller is less damped

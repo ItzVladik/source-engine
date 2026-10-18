@@ -58,6 +58,12 @@ public:
 
 protected:
 
+	CNetworkVar( bool, m_bSilenced );
+	bool			IsSilenced( void ) const { return m_bSilenced; }
+	void			SetSilenced( bool bSilenced ) { m_bSilenced = bSilenced; }
+	virtual Activity GetPrimaryAttackActivity( void );
+	virtual Activity GetDrawActivity( void );
+
 	bool			m_bLowered;			// Whether the viewmodel is raised or lowered
 	float			m_flRaiseTime;		// If lowered, the time we should raise the viewmodel
 	float			m_flHolsterTime;	// When the weapon was holstered

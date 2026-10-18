@@ -813,6 +813,43 @@ void CBaseCombatWeapon::GiveTo( CBaseEntity *pOther )
 // Input  : pOther - the entity that touched me
 // Output :
 //-----------------------------------------------------------------------------
+void CBaseCombatWeapon::AmmoScavengeTouch( CBaseEntity *pOther )
+{
+#if !defined( CLIENT_DLL )
+	if ( IsDissolving() )
+		return;
+
+	CBasePlayer *pPlayer = ToBasePlayer( pOther );
+	if ( !pPlayer )
+		return;
+
+	if ( HasSpawnFlags( SF_WEAPON_NO_PLAYER_PICKUP ) )
+		return;
+
+	if ( FClassnameIs( this, "weapon_frag" ) )
+	{
+		pPlayer->BumpWeapon( this );
+		return;
+	}
+
+	int primaryGiven   = ( UsesClipsForAmmo1() ) ? m_iClip1 : GetPrimaryAmmoCount();
+	int secondaryGiven = ( UsesClipsForAmmo2() ) ? m_iClip2 : GetSecondaryAmmoCount();
+
+	int takenPrimary   = pPlayer->GiveAmmo( primaryGiven, m_iPrimaryAmmoType );
+	int takenSecondary = pPlayer->GiveAmmo( secondaryGiven, m_iSecondaryAmmoType );
+
+	if ( UsesClipsForAmmo1() )
+		m_iClip1 -= takenPrimary;
+	else
+		SetPrimaryAmmoCount( GetPrimaryAmmoCount() - takenPrimary );
+
+	if ( UsesClipsForAmmo2() )
+		m_iClip2 -= takenSecondary;
+	else
+		SetSecondaryAmmoCount( GetSecondaryAmmoCount() - takenSecondary );
+#endif
+}
+
 void CBaseCombatWeapon::DefaultTouch( CBaseEntity *pOther )
 {
 #if !defined( CLIENT_DLL )
@@ -943,7 +980,7 @@ void CBaseCombatWeapon::RescindReloadHudHint()
 void CBaseCombatWeapon::SetPickupTouch( void )
 {
 #if !defined( CLIENT_DLL )
-	SetTouch(&CBaseCombatWeapon::DefaultTouch);
+	SetTouch(&CBaseCombatWeapon::AmmoScavengeTouch);
 
 	if ( gpGlobals->maxClients > 1 )
 	{
@@ -2639,6 +2676,7 @@ BEGIN_DATADESC( CBaseCombatWeapon )
 
 	// Function pointers
 	DEFINE_ENTITYFUNC( DefaultTouch ),
+	DEFINE_ENTITYFUNC( AmmoScavengeTouch ),
 	DEFINE_THINKFUNC( FallThink ),
 	DEFINE_THINKFUNC( Materialize ),
 	DEFINE_THINKFUNC( AttemptToMaterialize ),

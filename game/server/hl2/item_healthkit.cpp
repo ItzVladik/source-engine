@@ -11,6 +11,8 @@
 #include "items.h"
 #include "in_buttons.h"
 #include "engine/IEngineSound.h"
+#include "hl2_player.h"
+#include "underhell/uh_inventory.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -64,8 +66,26 @@ void CHealthKit::Precache( void )
 // Input  : *pPlayer - 
 // Output : 
 //-----------------------------------------------------------------------------
+static bool UH_TryInventoryHealthPickup( CItem *pItem, CBasePlayer *pPlayer, int iItem )
+{
+	CHL2_Player *pHL2Player = dynamic_cast<CHL2_Player *>( pPlayer );
+	if ( !pHL2Player )
+		return false;
+	if ( pHL2Player->UH_FindFreeSlot() < 0 )
+		return false;
+	pItem->FirePlayerPickupOutput( pHL2Player );
+	pHL2Player->EmitSound( "HL2Player.PickupItems" );
+	pItem->SetOwnerEntity( pHL2Player );
+	pHL2Player->UH_GiveItem( iItem );
+	UTIL_Remove( pItem );
+	return true;
+}
+
 bool CHealthKit::MyTouch( CBasePlayer *pPlayer )
 {
+	if ( UH_TryInventoryHealthPickup( this, pPlayer, UH_ITEM_HEALTHKIT ) )
+		return true;
+
 	if ( pPlayer->TakeHealth( sk_healthkit.GetFloat(), DMG_GENERIC ) )
 	{
 		CSingleUserRecipientFilter user( pPlayer );
@@ -119,6 +139,8 @@ public:
 
 	bool MyTouch( CBasePlayer *pPlayer )
 	{
+		if ( UH_TryInventoryHealthPickup( this, pPlayer, UH_ITEM_HEALTH_VIAL ) )
+			return true;
 		if ( pPlayer->TakeHealth( sk_healthvial.GetFloat(), DMG_GENERIC ) )
 		{
 			CSingleUserRecipientFilter user( pPlayer );

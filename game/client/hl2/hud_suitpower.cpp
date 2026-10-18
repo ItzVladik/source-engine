@@ -20,7 +20,8 @@ using namespace vgui;
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
-DECLARE_HUDELEMENT( CHudSuitPower );
+// Underhell: replaced by CHudStamina.
+// DECLARE_HUDELEMENT( CHudSuitPower );
 
 #define SUITPOWER_INIT -1
 
