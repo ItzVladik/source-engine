@@ -43,6 +43,8 @@ public:
 	bool	m_bLight;
 	bool	m_bSmoke;
 	bool	m_bPropFlare;
+	bool	m_bGlowStick;
+	int		m_nSkinNumber;
 	pixelvis_handle_t m_queryHandle;
 
 
@@ -61,6 +63,8 @@ IMPLEMENT_CLIENTCLASS_DT( C_Flare, DT_Flare, CFlare )
 	RecvPropInt( RECVINFO( m_bLight ) ),
 	RecvPropInt( RECVINFO( m_bSmoke ) ),
 	RecvPropInt( RECVINFO( m_bPropFlare ) ),
+	RecvPropInt( RECVINFO( m_bGlowStick ) ),
+	RecvPropInt( RECVINFO( m_nSkinNumber ) ),
 END_RECV_TABLE()
 
 //-----------------------------------------------------------------------------
@@ -75,6 +79,8 @@ C_Flare::C_Flare() : CSimpleEmitter( "C_Flare" )
 	m_bLight		= true;
 	m_bSmoke		= true;
 	m_bPropFlare	= false;
+	m_bGlowStick	= false;
+	m_nSkinNumber	= 0;
 
 	SetDynamicallyAllocated( false );
 	m_queryHandle = 0;
@@ -191,8 +197,9 @@ void C_Flare::Update( float timeDelta )
 
 	CSimpleEmitter::Update( timeDelta );
 
-	//Make sure our stored resources are up to date
-	RestoreResources();
+	// Glowsticks use only their coloured dynamic light; no flare sprite/smoke.
+	if ( !m_bGlowStick )
+		RestoreResources();
 
 	//Don't do this if the console is down
 	if ( timeDelta <= 0.0f )
@@ -279,9 +286,24 @@ void C_Flare::Update( float timeDelta )
 
 				//Raise the light a little bit away from the flare so it lights it up better.
 				dl->origin	= effect_origin + Vector( 0, 0, 4 );
-				dl->color.r = 255;
 				dl->die		= gpGlobals->curtime + 0.1f;
 
+				if ( m_bGlowStick )
+				{
+					switch ( m_nSkinNumber )
+					{
+					case 0: dl->color.r = 0;   dl->color.g = 255; dl->color.b = 0;   break;
+					case 2: dl->color.r = 255; dl->color.g = 0;   dl->color.b = 0;   break;
+					case 4: dl->color.r = 80;  dl->color.g = 170; dl->color.b = 255; break;
+					case 6: dl->color.r = 240; dl->color.g = 250; dl->color.b = 50;  break;
+					case 8: dl->color.r = 200; dl->color.g = 25;  dl->color.b = 240; break;
+					default: dl->color.r = dl->color.g = dl->color.b = 255; break;
+					}
+					dl->radius = baseScale * 256.0f;
+					return;
+				}
+
+				dl->color.r = 255;
 				dl->radius	= baseScale * random->RandomFloat( 245.0f, 256.0f );
 				dl->color.g = dl->color.b = random->RandomInt( 95, 128 );
 		

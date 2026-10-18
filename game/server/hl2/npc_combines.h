@@ -18,14 +18,14 @@
 class CNPC_CombineS : public CNPC_Combine
 {
 	DECLARE_CLASS( CNPC_CombineS, CNPC_Combine );
-#if HL2_EPISODIC
 	DECLARE_DATADESC();
-#endif
 
 public: 
 	void		Spawn( void );
 	void		Precache( void );
 	void		DeathSound( const CTakeDamageInfo &info );
+	void		PainSound( const CTakeDamageInfo &info );
+	void		SpawnUHShield( void );
 	void		PrescheduleThink( void );
 	void		BuildScheduleTestBits( void );
 	int			SelectSchedule ( void );
@@ -38,6 +38,9 @@ public:
 	void		ClearAttackConditions( void );
 
 	bool		m_fIsBlocking;
+	float		m_flNextUHPainSoundTime;
+	int			m_iUHShieldType;
+	EHANDLE		m_hUHShield;
 
 	bool		IsLightDamage( const CTakeDamageInfo &info );
 	bool		IsHeavyDamage( const CTakeDamageInfo &info );

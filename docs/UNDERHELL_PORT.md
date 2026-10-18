@@ -38,15 +38,20 @@ That tree is Orange Box SDK 2007 (vcproj, episodic). This tree is a later engine
 - Batteries / healthkits into inventory
 - Mirror-only DrawModel on C_BaseAnimating
 
+## Fourth pass
+
+- Jeep mounted gun: `EnableMountedGun`, muzzle attachment, particle muzzle, yaw 200, gunner-only aim/fire
+- Ragdoll Use/pickup, FCAP_IMPULSE_USE, UH dismember transfer + `UH_RagdollDismember`
+- Combine: SOUND_FMRADIO investigation, soldier shield spawn/drop, pain sentences, gib precache
+- Flashlight flicker convars
+- Flare glowstick netvars + client colours
+
 ## Still not 1:1 vs SDK 2007 vanilla hunks
 
-These remain in the SDK repo if you need another pass:
-
-- Combine / Ace / Butcher / infected AI edits in vanilla `npc_combine*` (new NPCs are in `underhell/npc_*.cpp`)
-- Jeep gunner / bullet-time tracers in `vehicle_jeep*`
-- Dismemberment / ragdoll extras in `physics_prop_ragdoll`, `props.cpp`
-- `EnvMessage` / `EnvHudHint` (paths are `EnvMessage.cpp` here)
-- Full flashlight/left-arm auto-switch path (flags are wired; original deny/switch logic is only partially applied)
-- Shader Editor runtime is compiled; engine GL path may still need the original binary interface
+- `EnvMessage` / `EnvHudHint` (large SDK rewrite vs TF2-era files)
+- BIK / sprite path, full viewmodel UH extras
+- Full flashlight/left-arm auto-switch path
+- Shader Editor GL binary interface
+- Remaining `props.cpp` / Ace / Butcher / infected vanilla hunks (new NPCs live in `underhell/npc_*.cpp`)
 
 Vanilla HL2/episodic should still build; Underhell maps need the episodic game (`-G episodic` / `hl2` with these VPCs).

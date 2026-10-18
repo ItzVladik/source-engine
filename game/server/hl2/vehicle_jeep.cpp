@@ -26,6 +26,7 @@
 #include "npc_crow.h"
 #include "globalstate.h"
 #include "vehicle_jeep.h"
+#include "particle_parse.h"
 #include "eventqueue.h"
 #include "rumble_shared.h"
 // NVNT haptic utils
@@ -42,8 +43,8 @@
 
 #define CANNON_MAX_UP_PITCH			20
 #define CANNON_MAX_DOWN_PITCH		20
-#define CANNON_MAX_LEFT_YAW			90
-#define CANNON_MAX_RIGHT_YAW		90
+#define CANNON_MAX_LEFT_YAW			200
+#define CANNON_MAX_RIGHT_YAW		200
 
 #define OVERTURNED_EXIT_WAITTIME	2.0f
 
@@ -131,6 +132,7 @@ BEGIN_DATADESC( CPropJeep )
 	DEFINE_FIELD( m_hLastPlayerInVehicle, FIELD_EHANDLE ),
 	DEFINE_FIELD( m_hSeagull, FIELD_EHANDLE ),
 	DEFINE_FIELD( m_bHasPoop, FIELD_BOOLEAN ),
+	DEFINE_KEYFIELD( m_bEnableMountedGun, FIELD_BOOLEAN, "EnableMountedGun" ),
 
 	DEFINE_INPUTFUNC( FIELD_VOID, "ShowHudHint", InputShowHudHint ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "StartRemoveTauCannon", InputStartRemoveTauCannon ),
@@ -154,6 +156,7 @@ LINK_ENTITY_TO_CLASS( prop_vehicle_jeep, CPropJeep );
 CPropJeep::CPropJeep( void )
 {
 	m_bHasGun = true;
+	m_bEnableMountedGun = false;
 	m_bGunHasBeenCutOff = false;
 	m_bCannonCharging = false;
 	m_flCannonChargeStartTime = 0;
@@ -189,6 +192,8 @@ void CPropJeep::Precache( void )
 
 	PrecacheScriptSound( "PropJeep.AmmoClose" );
 	PrecacheScriptSound( "PropJeep.FireCannon" );
+	PrecacheScriptSound( "FuncTank.Fire" );
+	PrecacheParticleSystem( "muzzle_star_uh" );
 	PrecacheScriptSound( "PropJeep.FireChargedCannon" );
 	PrecacheScriptSound( "PropJeep.AmmoOpen" );
 
@@ -262,6 +267,12 @@ void CPropJeep::Activate()
 //-----------------------------------------------------------------------------
 void CPropJeep::DoImpactEffect( trace_t &tr, int nDamageType )
 {
+	if ( m_bEnableMountedGun )
+	{
+		BaseClass::DoImpactEffect( tr, nDamageType );
+		return;
+	}
+
 	//Draw our beam
 	DrawBeam( tr.startpos, tr.endpos, 2.4 );
 
@@ -359,7 +370,7 @@ Vector CPropJeep::BodyTarget( const Vector &posSrc, bool bNoisy )
 	Vector	shotPos;
 	matrix3x4_t	matrix;
 
-	int eyeAttachmentIndex = LookupAttachment("vehicle_driver_eyes");
+	int eyeAttachmentIndex = LookupAttachment( m_bPlayerAtGun ? "vehicle_gunner_eyes" : "vehicle_driver_eyes" );
 	GetAttachment( eyeAttachmentIndex, matrix );
 	MatrixGetColumn( matrix, 3, shotPos );
 
@@ -381,7 +392,7 @@ void CPropJeep::AimGunAt( Vector *endPos, float flInterval )
 	Vector	aimPos = *endPos;
 
 	// See if the gun should be allowed to aim
-	if ( IsOverturned() || m_bEngineLocked || m_bHasGun == false )
+	if ( ( m_bEnableMountedGun && !m_bPlayerAtGun ) || IsOverturned() || m_bEngineLocked || m_bHasGun == false )
 	{
 		SetPoseParameter( JEEP_GUN_YAW, 0 );
 		SetPoseParameter( JEEP_GUN_PITCH, 0 );
@@ -395,7 +406,7 @@ void CPropJeep::AimGunAt( Vector *endPos, float flInterval )
 	}
 
 	matrix3x4_t gunMatrix;
-	GetAttachment( LookupAttachment("gun_ref"), gunMatrix );
+	GetAttachment( LookupAttachment("muzzle"), gunMatrix );
 
 	// transform the enemy into gun space
 	Vector localEnemyPosition;
@@ -733,7 +744,8 @@ void CPropJeep::Think( void )
 	}
 
 	// Aim gun based on the player view direction.
-	if ( m_bHasGun && m_hPlayer && !m_bExitAnimOn && !m_bEnterAnimOn )
+	if ( m_bHasGun && ( !m_bEnableMountedGun || m_bPlayerAtGun ) &&
+		m_hPlayer && !m_bExitAnimOn && !m_bEnterAnimOn )
 	{
 		Vector vecEyeDir, vecEyePos;
 		m_hPlayer->EyePositionAndVectors( &vecEyePos, &vecEyeDir, NULL, NULL );
@@ -898,19 +910,35 @@ void CPropJeep::FireCannon( void )
 	if ( m_bUnableToFire )
 		return;
 
-	m_flCannonTime = gpGlobals->curtime + 0.2f;
+	if ( m_bEnableMountedGun && !m_bPlayerAtGun )
+		return;
+
+	m_flCannonTime = gpGlobals->curtime + ( m_bEnableMountedGun ? 0.1f : 0.2f );
 	m_bCannonCharging = false;
 
-	//Find the direction the gun is pointing in
 	Vector aimDir;
-	GetCannonAim( &aimDir );
+	if ( m_bEnableMountedGun )
+	{
+		QAngle muzzleAngles;
+		GetAttachment( "muzzle", m_vecGunOrigin, muzzleAngles );
+		AngleVectors( muzzleAngles, &aimDir );
+		DispatchParticleEffect( "muzzle_star_uh", PATTACH_POINT_FOLLOW, this, "muzzle_uh" );
+	}
+	else
+	{
+		GetCannonAim( &aimDir );
+	}
 
 #if defined( WIN32 ) && !defined( _X360 ) 
 	// NVNT apply a punch on fire
 	HapticPunch(m_hPlayer,0,0,hap_jeep_cannon_mag.GetFloat());
 #endif
-	FireBulletsInfo_t info( 1, m_vecGunOrigin, aimDir, VECTOR_CONE_1DEGREES, MAX_TRACE_LENGTH, m_nAmmoType );
+	FireBulletsInfo_t info( 1, m_vecGunOrigin, aimDir,
+		m_bEnableMountedGun ? Vector( 0.00873f, 0.00873f, 0.00873f ) : VECTOR_CONE_1DEGREES,
+		MAX_TRACE_LENGTH, m_nAmmoType );
 
+	if ( m_bEnableMountedGun )
+		info.m_iDamage = sk_jeep_gauss_damage.GetInt();
 	info.m_nFlags = FIRE_BULLETS_ALLOW_WATER_SURFACE_IMPACTS;
 	info.m_pAttacker = m_hPlayer;
 
@@ -923,8 +951,9 @@ void CPropJeep::FireCannon( void )
 		m_hPlayer->RumbleEffect( RUMBLE_PISTOL, 0, RUMBLE_FLAG_RESTART	);
 	}
 
-	CPASAttenuationFilter sndFilter( this, "PropJeep.FireCannon" );
-	EmitSound( sndFilter, entindex(), "PropJeep.FireCannon" );
+	const char *pszFireSound = m_bEnableMountedGun ? "FuncTank.Fire" : "PropJeep.FireCannon";
+	CPASAttenuationFilter sndFilter( this, pszFireSound );
+	EmitSound( sndFilter, entindex(), pszFireSound );
 	
 	// make cylinders of gun spin a bit
 	m_nSpinPos += JEEP_GUN_SPIN_RATE;
@@ -1126,7 +1155,7 @@ void CPropJeep::GetCannonAim( Vector *resultDir )
 	Vector	muzzleOrigin;
 	QAngle	muzzleAngles;
 
-	GetAttachment( LookupAttachment("gun_ref"), muzzleOrigin, muzzleAngles );
+	GetAttachment( LookupAttachment("muzzle"), muzzleOrigin, muzzleAngles );
 
 	AngleVectors( muzzleAngles, resultDir );
 }

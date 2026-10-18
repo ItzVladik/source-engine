@@ -83,7 +83,7 @@ public:
 	bool			NPC_HasPrimaryWeapon( void ) { return true; }
 	void			NPC_AimPrimaryWeapon( Vector vecTarget );
 
-	const char		*GetTracerType( void ) { return "AR2Tracer"; }
+	const char		*GetTracerType( void ) { return m_bEnableMountedGun ? "AR2Tracer" : NULL; }
 	void			DoImpactEffect( trace_t &tr, int nDamageType );
 
 	bool HeadlightIsOn( void ) { return m_bHeadlightIsOn; }
@@ -162,6 +162,8 @@ protected:
 	bool			m_bHasPoop;
 
 	CNetworkVar( bool, m_bHeadlightIsOn );
+
+	bool			m_bEnableMountedGun;
 };
 
 #endif // VEHICLE_JEEP_H
